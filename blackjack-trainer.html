@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Blackjack Basic Strategy Trainer</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🃏</text></svg>">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -378,6 +379,86 @@
       .page-layout { flex-direction: column; align-items: center; }
       .tracker-panel { max-width: 680px; width: 100%; position: static; }
     }
+
+/* Deck selector */
+.deck-selector {
+  display: flex; align-items: center; justify-content: center;
+  gap: 8px; margin-bottom: 14px; font-size: 0.82rem;
+}
+.deck-selector > span { opacity: 0.6; }
+.deck-btn {
+  background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 6px; color: #fff; font-size: 0.78rem; font-weight: 600;
+  padding: 5px 9px; cursor: pointer; transition: background 0.15s, border-color 0.15s;
+}
+.deck-btn:hover { background: rgba(0,0,0,0.4); }
+.deck-btn.active { background: #15803d; border-color: #16a34a; }
+
+/* Streak score */
+.score-streak { color: #a78bfa; }
+
+/* Reset button in tracker */
+.btn-reset {
+  width: 100%; padding: 7px;
+  border: 1px solid rgba(255,255,255,0.12); border-radius: 8px;
+  background: transparent; color: rgba(255,255,255,0.38);
+  font-size: 0.74rem; cursor: pointer; margin-top: 12px;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.btn-reset:hover { background: rgba(185,28,28,0.3); color: #fca5a5; border-color: #b91c1c; }
+
+/* Graduation toast */
+.grad-toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  background: #15803d; border: 1px solid #16a34a; border-radius: 10px;
+  padding: 10px 20px; font-size: 0.85rem; font-weight: 600;
+  pointer-events: none; opacity: 0; transition: opacity 0.3s;
+  z-index: 100; white-space: nowrap;
+}
+.grad-toast.show { opacity: 1; }
+
+/* Strategy chart section */
+.chart-section {
+  width: 100%; max-width: 1120px; margin-top: 16px;
+}
+.chart-toggle {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  cursor: pointer; background: rgba(0,0,0,0.2);
+  border: 1px solid rgba(255,255,255,0.1); border-radius: 10px;
+  padding: 10px 20px; font-size: 0.85rem; font-weight: 600;
+  color: #fff; width: 100%; transition: background 0.2s;
+  text-align: center;
+}
+.chart-toggle:hover { background: rgba(0,0,0,0.32); }
+.chart-body {
+  display: none; background: rgba(0,0,0,0.22);
+  border: 1px solid rgba(255,255,255,0.1); border-top: none;
+  border-radius: 0 0 12px 12px; overflow-x: auto;
+  padding: 16px; margin-top: -1px;
+}
+.chart-body.open { display: block; }
+.strategy-table { border-collapse: collapse; font-size: 0.72rem; white-space: nowrap; margin: 0 auto; }
+.strategy-table th { padding: 4px 8px; opacity: 0.55; font-weight: 600; text-align: center; }
+.strategy-table td { padding: 3px 5px; text-align: center; font-weight: 700; min-width: 28px; border: 1px solid rgba(255,255,255,0.07); }
+.strategy-table .row-label { text-align: right; opacity: 0.7; font-weight: 600; padding-right: 10px; font-size: 0.69rem; border: none; background: transparent !important; }
+.strategy-table .section-header td { font-size: 0.63rem; letter-spacing: 1px; text-transform: uppercase; opacity: 0.45; border: none; background: rgba(255,255,255,0.04) !important; padding: 6px 0 2px; }
+.cell-H { background: rgba(37,99,235,0.35); color: #93c5fd; }
+.cell-S { background: rgba(220,38,38,0.35); color: #fca5a5; }
+.cell-D { background: rgba(217,119,6,0.4);  color: #fcd34d; }
+.cell-P { background: rgba(124,58,237,0.4); color: #c4b5fd; }
+.cell-R { background: rgba(71,85,105,0.4);  color: #cbd5e1; }
+.chart-legend { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 10px; font-size: 0.72rem; }
+.chart-legend span { display: flex; align-items: center; gap: 4px; }
+.legend-swatch { width: 14px; height: 14px; border-radius: 3px; }
+
+/* Drill indicator in tracker */
+.tracker-progress { font-size: 0.62rem; opacity: 0.5; text-align: right; margin-left: 4px; }
+
+/* Mobile: split hands scroll on very small screens */
+@media (max-width: 480px) {
+  .split-hands-row { overflow-x: auto; padding-bottom: 4px; }
+  .split-hand-col { min-width: 80px; }
+}
   </style>
 </head>
 <body>
@@ -402,6 +483,28 @@
     <span class="das-badge on" id="surrenderBadge">ON</span>
   </label>
 </div>
+<div class="das-toggle">
+  <label>
+    <input type="checkbox" id="h17Toggle" onchange="onH17Change()" />
+    Dealer Hits Soft 17 (H17)
+    <span class="das-badge off" id="h17Badge">OFF</span>
+  </label>
+</div>
+<div class="das-toggle">
+  <label>
+    <input type="checkbox" id="autoAdvanceToggle" onchange="onAutoAdvanceChange()" />
+    Auto-Advance on Correct
+    <span class="das-badge off" id="autoAdvanceBadge">OFF</span>
+  </label>
+</div>
+<div class="deck-selector">
+  <span>Decks:</span>
+  <button class="deck-btn" data-decks="1" onclick="setDeckCount(1)">1</button>
+  <button class="deck-btn" data-decks="2" onclick="setDeckCount(2)">2</button>
+  <button class="deck-btn" data-decks="4" onclick="setDeckCount(4)">4</button>
+  <button class="deck-btn active" data-decks="6" onclick="setDeckCount(6)">6</button>
+  <button class="deck-btn" data-decks="8" onclick="setDeckCount(8)">8</button>
+</div>
 
 <div class="scoreboard">
   <div class="score-item">
@@ -415,6 +518,10 @@
   <div class="score-item">
     <div class="score-label">Accuracy</div>
     <div class="score-value score-pct" id="scorePct">—</div>
+  </div>
+  <div class="score-item">
+    <div class="score-label">Streak</div>
+    <div class="score-value score-streak" id="scoreStreak">0</div>
   </div>
 </div>
 
@@ -463,9 +570,19 @@
   <div id="trackerList">
     <div class="tracker-empty">No mistakes yet</div>
   </div>
+  <button class="btn-reset" onclick="resetAll()">Reset Scores &amp; Tracker</button>
 </div>
 
 </div><!-- end .page-layout -->
+
+<div class="chart-section">
+  <button class="chart-toggle" onclick="toggleChart(this)">
+    ▶ Strategy Reference Chart
+  </button>
+  <div class="chart-body" id="chartBody"></div>
+</div>
+
+<div class="grad-toast" id="gradToast"></div>
 
 <script>
 // ─── Card Data ──────────────────────────────────────────────────────────────
@@ -518,109 +635,58 @@ function dealerIndex(rank) {
   return v - 2;
 }
 
-// DAS state — read by basicStrategy
-let dasEnabled = true;
-// Surrender state — read by basicStrategy
+// ─── Settings state ──────────────────────────────────────────────────────────
+let dasEnabled       = true;
 let surrenderEnabled = true;
+let h17Enabled       = false;
+let deckCount        = 6;
+let autoAdvance      = false;
 
 // Actions: H=Hit, S=Stand, D=Double Down, P=Split, R=Surrender
 function basicStrategy(playerCards, dealerRank) {
-  const di   = dealerIndex(dealerRank);
+  const di    = dealerIndex(dealerRank);
   const total = handTotal(playerCards);
   const soft  = isSoft(playerCards);
   const pair  = isPair(playerCards);
   const das   = dasEnabled;
+  const h17   = h17Enabled;
+  const sd    = deckCount === 1;   // single-deck adjustments
+  const fd    = deckCount <= 2;    // 1-2 deck adjustments
 
   // ── Pairs ─────────────────────────────────────────────────────────────────
-  // T-H with DAS:  2,2 / 3,3 / 6,6 / 7,7 split vs 2–7
-  // T-H no DAS:    cells that relied on doubling after split revert to Hit:
-  //   2,2 → split vs 4–7 only  (Hit vs 2–3)
-  //   3,3 → split vs 4–7 only  (Hit vs 2–3)
-  //   6,6 → split vs 3–6 only  (Hit vs 2)
-  //   7,7 — unaffected (no double after split benefit)
   if (pair) {
     const pv = cardValue(playerCards[0].rank);
-
-    if (pv === 1)  return 'P';  // A,A — always split
-    if (pv === 10) return 'S';  // 10,10 — always stand
-
-    if (pv === 9) {
-      // Split vs 2–6 and 8–9; Stand vs 7, 10, A
-      //             2   3   4   5   6   7   8   9  10   A
-      return ['P','P','P','P','P','S','P','P','S','S'][di];
-    }
-
-    if (pv === 8) {
-      // Surrender vs dealer 10 (if allowed); Split vs all others
-      if (di === 8) return surrenderEnabled ? 'R' : 'P';
-      return 'P';
-    }
-
-    if (pv === 7) {
-      // Split vs 2–7; Hit otherwise — same with or without DAS
-      return di <= 5 ? 'P' : 'H';
-    }
-
-    if (pv === 6) {
-      // DAS:  Split vs 2–7
-      // NDAS: Split vs 3–6 (dealer 2 becomes Hit)
-      if (das)  return di <= 5 ? 'P' : 'H';
-      else      return (di >= 1 && di <= 4) ? 'P' : 'H';
-    }
-
-    if (pv === 5) {
-      // Never split 5,5 — treat as hard 10
-      return di <= 7 ? 'D' : 'H';
-    }
-
-    if (pv === 4) {
-      // Treat as hard 8 — always Hit (no split regardless of DAS)
-      return 'H';
-    }
-
-    if (pv === 3) {
-      // DAS:  Split vs 2–7
-      // NDAS: Split vs 4–7 (dealer 2–3 become Hit)
-      if (das)  return di <= 5 ? 'P' : 'H';
-      else      return (di >= 2 && di <= 5) ? 'P' : 'H';
-    }
-
-    if (pv === 2) {
-      // DAS:  Split vs 2–7
-      // NDAS: Split vs 4–7 (dealer 2–3 become Hit)
-      if (das)  return di <= 5 ? 'P' : 'H';
-      else      return (di >= 2 && di <= 5) ? 'P' : 'H';
-    }
+    if (pv === 1)  return 'P';
+    if (pv === 10) return 'S';
+    if (pv === 9)  return ['P','P','P','P','P','S','P','P','S','S'][di];
+    if (pv === 8)  { if (di === 8) return surrenderEnabled ? 'R' : 'P'; return 'P'; }
+    if (pv === 7)  return (sd ? di <= 6 : di <= 5) ? 'P' : 'H';  // SD: split vs 2–8
+    if (pv === 6)  { if (das) return di <= 5 ? 'P' : 'H'; return (di >= 1 && di <= 4) ? 'P' : 'H'; }
+    if (pv === 5)  return di <= 7 ? 'D' : 'H';
+    if (pv === 4)  return 'H';
+    if (pv === 3)  { if (das) return di <= 5 ? 'P' : 'H'; return (di >= 2 && di <= 5) ? 'P' : 'H'; }
+    if (pv === 2)  { if (das) return di <= 5 ? 'P' : 'H'; return (di >= 2 && di <= 5) ? 'P' : 'H'; }
   }
 
   // ── Soft Totals ────────────────────────────────────────────────────────────
-  // T-H simplified rule: A,2–A,7 Double vs 4–6; A,7 Stand vs 2,3,7,8 else Hit;
-  // A,8 and A,9 always Stand.
   if (soft && playerCards.length === 2) {
     const nonAce = playerCards.find(c => c.rank !== 'A');
     if (nonAce) {
       const nv = cardValue(nonAce.rank);
-
-      if (nv >= 8) return 'S'; // A,8 / A,9 — stand always
-
+      if (nv >= 8) return 'S';
       if (nv === 7) {
-        // A,7 (soft 18): Double vs 4–6; Stand vs 2,3,7,8; Hit vs 9,10,A
-        if (di >= 2 && di <= 4) return 'D'; // dealer 4,5,6
-        if (di === 0 || di === 1 || di === 5 || di === 6) return 'S'; // dealer 2,3,7,8
-        return 'H'; // dealer 9,10,A
+        if (di >= 2 && di <= 4) return 'D';
+        if (di === 0 || di === 1 || di === 5 || di === 6) return 'S';
+        return 'H';
       }
-
-      // A,2 through A,6: Double vs 4–6, Hit otherwise
-      if (di >= 2 && di <= 4) return 'D'; // dealer 4,5,6
+      if (di >= 2 && di <= 4) return 'D';
       return 'H';
     }
   }
 
   // ── Hard Totals ────────────────────────────────────────────────────────────
-  // T-H Surrender rules (checked before stand/hit):
-  //   Hard 16 vs 9, 10, A  → Surrender
-  //   Hard 15 vs 10, A     → Surrender
-  //   Hard 14 vs 10        → Surrender
+  // Single-deck: Hard 8 doubles vs 5–6
+  if (sd && total === 8 && (di === 3 || di === 4)) return 'D';
 
   if (surrenderEnabled && total >= 14 && total <= 16) {
     if (total === 16 && (di === 7 || di === 8 || di === 9)) return 'R';
@@ -628,16 +694,16 @@ function basicStrategy(playerCards, dealerRank) {
     if (total === 14 && di === 8)                           return 'R';
   }
 
-  // Hard doubles
-  if (total === 11) return di <= 8 ? 'D' : 'H';  // Double vs 2–10, Hit vs A
-  if (total === 10) return di <= 7 ? 'D' : 'H';  // Double vs 2–9, Hit vs 10/A
-  if (total === 9)  return di <= 4 ? 'D' : 'H';  // Double vs 2–6, Hit otherwise
+  // Hard doubles — H17 adds Double 11 vs A
+  if (total === 11) return (di <= 8 || h17) ? 'D' : 'H';
+  if (total === 10) return di <= 7 ? 'D' : 'H';
+  // 1–2 deck: Hard 9 doubles vs 2–6; 4+ deck: vs 3–6
+  if (total === 9)  return (fd ? di <= 4 : (di >= 1 && di <= 4)) ? 'D' : 'H';
 
-  // Hard stand/hit
   if (total >= 17)                return 'S';
-  if (total >= 13 && total <= 16) return di <= 4 ? 'S' : 'H'; // Stand vs 2–6
-  if (total === 12)               return (di >= 2 && di <= 4) ? 'S' : 'H'; // Stand vs 4–6
-  return 'H'; // 8 or less
+  if (total >= 13 && total <= 16) return di <= 4 ? 'S' : 'H';
+  if (total === 12)               return (di >= 2 && di <= 4) ? 'S' : 'H';
+  return 'H';
 }
 
 // ─── Render Cards ────────────────────────────────────────────────────────────
@@ -661,11 +727,16 @@ function makeCardEl(card, faceDown = false) {
 let playerCards = [], dealerCards = [];
 let correct = 0, total_hands = 0;
 let answered = false;
+let streak = 0;
 
 // Split mode state
 let splitHands = [];
 let splitHandIndex = 0;
 let inSplitMode = false;
+
+// Study tracker state
+const wrongCounts        = {};
+const consecutiveCorrect = {};
 
 const ALL_BTN_IDS = ['btnHit','btnStand','btnDouble','btnSplit','btnSurrender'];
 
@@ -681,8 +752,22 @@ function deal() {
   document.getElementById('splitSkipArea').style.display = 'none';
 
   answered = false;
-  do { playerCards = [randomCard(), randomCard()]; } while (handTotal(playerCards) === 21);
-  dealerCards = [randomCard(), randomCard()]; // index 0 = face-down, 1 = face-up
+
+  // Weighted drill: increase frequency of known weak spots
+  const drillKey = pickDrillHand();
+  if (drillKey) {
+    const gen = generateHandForKey(drillKey);
+    if (gen && handTotal(gen.playerCards) !== 21) {
+      playerCards = gen.playerCards;
+      dealerCards = gen.dealerCards;
+    } else {
+      do { playerCards = [randomCard(), randomCard()]; } while (handTotal(playerCards) === 21);
+      dealerCards = [randomCard(), randomCard()];
+    }
+  } else {
+    do { playerCards = [randomCard(), randomCard()]; } while (handTotal(playerCards) === 21);
+    dealerCards = [randomCard(), randomCard()];
+  }
 
   ALL_BTN_IDS.forEach(id => {
     const b = document.getElementById(id);
@@ -690,10 +775,7 @@ function deal() {
     b.disabled = false;
   });
 
-  // Split only available when player has a pair
   document.getElementById('btnSplit').disabled = !isPair(playerCards);
-
-  // Surrender button only shown when the table allows it
   document.querySelector('.action-surrender').style.display = surrenderEnabled ? '' : 'none';
 
   renderHands();
@@ -707,6 +789,69 @@ function deal() {
   btnNext.textContent = 'Next Hand →';
   btnNext.onclick = deal;
   btnNext.style.display = 'none';
+}
+
+// ─── Drill / weighted dealing ─────────────────────────────────────────────────
+function pickDrillHand() {
+  const keys = Object.keys(wrongCounts).filter(k => (consecutiveCorrect[k] || 0) < 5);
+  if (!keys.length || Math.random() > 0.65) return null;
+  const total = keys.reduce((s, k) => s + wrongCounts[k], 0);
+  let r = Math.random() * total;
+  for (const k of keys) { r -= wrongCounts[k]; if (r <= 0) return k; }
+  return keys[keys.length - 1];
+}
+
+function forceCard(value) {
+  if (value === 1) return { rank: 'A', suit: SUITS[Math.floor(Math.random()*4)] };
+  if (value === 10) {
+    return { rank: ['10','J','Q','K'][Math.floor(Math.random()*4)], suit: SUITS[Math.floor(Math.random()*4)] };
+  }
+  return { rank: String(value), suit: SUITS[Math.floor(Math.random()*4)] };
+}
+
+function generateHandForKey(key) {
+  try {
+    const [handDesc, dealerStr] = key.split('|');
+    const dealerVal  = dealerStr === 'A' ? 1 : parseInt(dealerStr);
+    const dealerCard = forceCard(dealerVal);
+    const dealerHole = randomCard();
+    let pc;
+
+    if (handDesc === 'Pair of Aces') {
+      pc = [{rank:'A',suit:SUITS[0]},{rank:'A',suit:SUITS[1]}];
+    } else if (handDesc === 'Pair of 10s') {
+      const rr = ['10','J','Q','K'];
+      pc = [{rank:rr[Math.floor(Math.random()*4)],suit:SUITS[0]},{rank:rr[Math.floor(Math.random()*4)],suit:SUITS[1]}];
+    } else if (handDesc.startsWith('Pair of ')) {
+      const r = handDesc.slice(8, -1); // "Pair of 8s" → "8"
+      pc = [{rank:r,suit:SUITS[0]},{rank:r,suit:SUITS[1]}];
+    } else if (handDesc.startsWith('Soft ')) {
+      const nonAceVal = parseInt(handDesc.slice(5)) - 11;
+      pc = [{rank:'A',suit:SUITS[Math.floor(Math.random()*4)]}, forceCard(nonAceVal)];
+    } else {
+      // Hard N
+      pc = buildHardHand(parseInt(handDesc.slice(5)));
+    }
+
+    if (!pc) return null;
+    return { playerCards: pc, dealerCards: [dealerHole, dealerCard] };
+  } catch(e) { return null; }
+}
+
+function buildHardHand(total) {
+  const opts = [];
+  for (let a = 2; a <= Math.min(10, total - 2); a++) {
+    const b = total - a;
+    if (b >= 2 && b <= 10 && a !== b) opts.push([a, b]);
+  }
+  if (!opts.length) {
+    for (let a = 2; a <= Math.min(10, total - 2); a++) {
+      const b = total - a; if (b >= 2 && b <= 10) { opts.push([a, b]); break; }
+    }
+  }
+  if (!opts.length) return null;
+  const [a, b] = opts[Math.floor(Math.random() * opts.length)];
+  return [forceCard(a), forceCard(b)];
 }
 
 function renderHands() {
@@ -750,7 +895,6 @@ function choose(action) {
   const isCorrect = action === correctAction;
 
   ALL_BTN_IDS.forEach(id => { document.getElementById(id).disabled = true; });
-
   document.getElementById(btnIds[action]).classList.add(isCorrect ? 'correct' : 'wrong');
   if (!isCorrect) {
     const cb = document.getElementById(btnIds[correctAction]);
@@ -758,7 +902,24 @@ function choose(action) {
   }
 
   total_hands++;
-  if (isCorrect) correct++;
+  if (isCorrect) {
+    correct++;
+    streak++;
+    // Track consecutive correct for drill graduation
+    const key = getTrackingKey(playerCards, dealerCards[1].rank);
+    if (wrongCounts[key] !== undefined) {
+      consecutiveCorrect[key] = (consecutiveCorrect[key] || 0) + 1;
+      if (consecutiveCorrect[key] >= 5) {
+        delete wrongCounts[key];
+        delete consecutiveCorrect[key];
+        updateTracker();
+        showGradToast(key.split('|')[0]);
+      }
+    }
+  } else {
+    streak = 0;
+    trackMistake(playerCards, dealerCards[1].rank);
+  }
   updateScore();
 
   const fb = document.getElementById('feedback');
@@ -769,24 +930,30 @@ function choose(action) {
     const why = getExplanation(playerCards, dealerCards[1].rank, correctAction);
     fb.className = 'feedback wrong';
     fb.innerHTML = `<span class="feedback-icon">❌</span><span><strong>Not quite.</strong> T-H Basic Strategy says <strong>${actionLabels[correctAction]}</strong>. ${why}</span>`;
-    trackMistake(playerCards, dealerCards[1].rank);
   }
 
-  // Correct split: auto-advance to split hands immediately (initial or re-split)
+  saveState();
+
+  // Correct split → auto-advance into split hands
   if (action === 'P' && isCorrect) {
     if (!inSplitMode) {
-      splitHands = [
-        [playerCards[0], randomCard()],
-        [playerCards[1], randomCard()]
-      ];
+      splitHands = [[playerCards[0], randomCard()], [playerCards[1], randomCard()]];
     } else {
-      // Re-split: replace current hand with two new hands
       const [cA, cB] = splitHands[splitHandIndex];
       splitHands.splice(splitHandIndex, 1, [cA, randomCard()], [cB, randomCard()]);
     }
-    enterSplitHand(splitHandIndex, false); // keep "Correct!" feedback visible
-  } else {
-    advanceSplitOrEnd();
+    enterSplitHand(splitHandIndex, false);
+    return;
+  }
+
+  advanceSplitOrEnd();
+
+  // Auto-advance on correct answer
+  if (autoAdvance && isCorrect) {
+    setTimeout(() => {
+      const btn = document.getElementById('btnNext');
+      if (btn && btn.style.display !== 'none') btn.click();
+    }, 650);
   }
 }
 
@@ -879,6 +1046,7 @@ function skipRound() {
 function updateScore() {
   document.getElementById('scoreCorrect').textContent = correct;
   document.getElementById('scoreWrong').textContent   = total_hands - correct;
+  document.getElementById('scoreStreak').textContent  = streak;
   const pct = total_hands > 0 ? Math.round((correct / total_hands) * 100) : 0;
   document.getElementById('scorePct').textContent     = total_hands > 0 ? pct + '%' : '—';
 }
@@ -921,13 +1089,14 @@ function getExplanation(cards, dealerRank, correctAction) {
 }
 
 // ─── Study Tracker ───────────────────────────────────────────────────────────
-const wrongCounts = {};
+function getTrackingKey(cards, dealerRank) {
+  return `${describeHand(cards)}|${cardValue(dealerRank) >= 10 ? '10' : dealerRank}`;
+}
 
 function trackMistake(cards, dealerRank) {
-  const hand   = describeHand(cards);
-  const dealer = cardValue(dealerRank) >= 10 ? '10' : dealerRank;
-  const key    = `${hand}|${dealer}`;
+  const key = getTrackingKey(cards, dealerRank);
   wrongCounts[key] = (wrongCounts[key] || 0) + 1;
+  consecutiveCorrect[key] = 0;
   updateTracker();
 }
 
@@ -943,6 +1112,7 @@ function updateTracker() {
 
   entries.forEach(([key, count]) => {
     const [hand, dealer] = key.split('|');
+    const consec = consecutiveCorrect[key] || 0;
     const row = document.createElement('div');
     row.className = 'tracker-entry';
 
@@ -957,6 +1127,10 @@ function updateTracker() {
     const dealerEl = document.createElement('span');
     dealerEl.className = 'tracker-dealer';
     dealerEl.textContent = dealer;
+    if (consec > 0) {
+      dealerEl.title = `${consec}/5 correct in a row`;
+      dealerEl.innerHTML = dealer + ` <span class="tracker-progress">${consec}/5</span>`;
+    }
 
     row.append(handEl, tallyEl, dealerEl);
     list.appendChild(row);
@@ -965,32 +1139,232 @@ function updateTracker() {
 
 function tallyString(n) {
   let s = '';
-  const full = Math.floor(n / 5);
-  const rem  = n % 5;
+  const full = Math.floor(n / 5), rem = n % 5;
   for (let i = 0; i < full; i++) s += '||||/ ';
   if (rem) s += '|'.repeat(rem);
   return s.trim();
 }
 
-// ─── DAS Toggle ──────────────────────────────────────────────────────────────
-function onDasChange() {
-  dasEnabled = document.getElementById('dasToggle').checked;
-  const badge = document.getElementById('dasBadge');
-  badge.textContent = dasEnabled ? 'ON' : 'OFF';
-  badge.className   = dasEnabled ? 'das-badge on' : 'das-badge off';
-  deal(); // re-deal so current hand reflects new rule
+// Graduation toast
+let gradTimer;
+function showGradToast(handName) {
+  const toast = document.getElementById('gradToast');
+  toast.textContent = `✓ ${handName} mastered — removed from drill list`;
+  toast.classList.add('show');
+  clearTimeout(gradTimer);
+  gradTimer = setTimeout(() => toast.classList.remove('show'), 3000);
 }
 
-// ─── Surrender Toggle ────────────────────────────────────────────────────────
+// ─── Persistence ─────────────────────────────────────────────────────────────
+function saveState() {
+  try {
+    localStorage.setItem('bjTrainer', JSON.stringify({
+      correct, total_hands, streak,
+      wrongCounts: {...wrongCounts},
+      consecutiveCorrect: {...consecutiveCorrect},
+      dasEnabled, surrenderEnabled, h17Enabled, deckCount, autoAdvance
+    }));
+  } catch(e) {}
+}
+
+function loadState() {
+  try {
+    const s = JSON.parse(localStorage.getItem('bjTrainer') || 'null');
+    if (!s) return;
+    correct     = s.correct     || 0;
+    total_hands = s.total_hands || 0;
+    streak      = s.streak      || 0;
+    Object.assign(wrongCounts,        s.wrongCounts        || {});
+    Object.assign(consecutiveCorrect, s.consecutiveCorrect || {});
+    dasEnabled       = s.dasEnabled       ?? true;
+    surrenderEnabled = s.surrenderEnabled ?? true;
+    h17Enabled       = s.h17Enabled       ?? false;
+    deckCount        = s.deckCount        || 6;
+    autoAdvance      = s.autoAdvance      ?? false;
+
+    syncToggleUI('dasToggle',         'dasBadge',         dasEnabled);
+    syncToggleUI('surrenderToggle',   'surrenderBadge',   surrenderEnabled);
+    syncToggleUI('h17Toggle',         'h17Badge',         h17Enabled);
+    syncToggleUI('autoAdvanceToggle', 'autoAdvanceBadge', autoAdvance);
+    document.querySelectorAll('.deck-btn').forEach(btn =>
+      btn.classList.toggle('active', parseInt(btn.dataset.decks) === deckCount));
+
+    updateScore();
+    updateTracker();
+  } catch(e) {}
+}
+
+function syncToggleUI(toggleId, badgeId, state) {
+  document.getElementById(toggleId).checked   = state;
+  document.getElementById(badgeId).textContent = state ? 'ON' : 'OFF';
+  document.getElementById(badgeId).className   = state ? 'das-badge on' : 'das-badge off';
+}
+
+// ─── Settings toggles ────────────────────────────────────────────────────────
+function onDasChange() {
+  dasEnabled = document.getElementById('dasToggle').checked;
+  syncToggleUI('dasToggle', 'dasBadge', dasEnabled);
+  saveState(); deal();
+}
+
 function onSurrenderChange() {
   surrenderEnabled = document.getElementById('surrenderToggle').checked;
-  const badge = document.getElementById('surrenderBadge');
-  badge.textContent = surrenderEnabled ? 'ON' : 'OFF';
-  badge.className   = surrenderEnabled ? 'das-badge on' : 'das-badge off';
-  deal(); // re-deal so current hand reflects new rule
+  syncToggleUI('surrenderToggle', 'surrenderBadge', surrenderEnabled);
+  saveState(); deal();
+}
+
+function onH17Change() {
+  h17Enabled = document.getElementById('h17Toggle').checked;
+  syncToggleUI('h17Toggle', 'h17Badge', h17Enabled);
+  saveState(); deal();
+}
+
+function onAutoAdvanceChange() {
+  autoAdvance = document.getElementById('autoAdvanceToggle').checked;
+  syncToggleUI('autoAdvanceToggle', 'autoAdvanceBadge', autoAdvance);
+  saveState();
+}
+
+function setDeckCount(n) {
+  deckCount = n;
+  document.querySelectorAll('.deck-btn').forEach(btn =>
+    btn.classList.toggle('active', parseInt(btn.dataset.decks) === n));
+  saveState(); deal();
+}
+
+// ─── Reset ───────────────────────────────────────────────────────────────────
+function resetAll() {
+  if (!confirm('Reset all scores and tracker data?')) return;
+  correct = 0; total_hands = 0; streak = 0;
+  Object.keys(wrongCounts).forEach(k => delete wrongCounts[k]);
+  Object.keys(consecutiveCorrect).forEach(k => delete consecutiveCorrect[k]);
+  updateScore(); updateTracker(); saveState(); deal();
+}
+
+// ─── Keyboard shortcuts ───────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName)) return;
+  if (e.key === ' ' || e.key === 'Enter') {
+    e.preventDefault();
+    const btn = document.getElementById('btnNext');
+    if (btn && btn.style.display !== 'none') btn.click();
+    return;
+  }
+  if (answered) return;
+  const actionMap = { h:'H', s:'S', d:'D', p:'P', r:'R' };
+  const action = actionMap[e.key.toLowerCase()];
+  if (action) {
+    const btn = document.getElementById(btnIds[action]);
+    if (btn && !btn.disabled) btn.click();
+  }
+});
+
+// ─── Strategy Chart ───────────────────────────────────────────────────────────
+function toggleChart(btn) {
+  const body = document.getElementById('chartBody');
+  const open = body.classList.toggle('open');
+  btn.textContent = (open ? '▼' : '▶') + ' Strategy Reference Chart';
+  if (open && !body.innerHTML.trim()) renderChart();
+}
+
+function renderChart() {
+  const body = document.getElementById('chartBody');
+  const dealers = ['2','3','4','5','6','7','8','9','10','A'];
+  const cellClass = { H:'cell-H', S:'cell-S', D:'cell-D', P:'cell-P', R:'cell-R' };
+  const cellLabel = { H:'H', S:'S', D:'D', P:'P', R:'R' };
+
+  function makeRow(label, cards) {
+    const tr = document.createElement('tr');
+    const th = document.createElement('td');
+    th.className = 'row-label'; th.textContent = label;
+    tr.appendChild(th);
+    dealers.forEach(dr => {
+      const td = document.createElement('td');
+      const action = basicStrategy(cards, dr);
+      td.className = cellClass[action] || '';
+      td.textContent = cellLabel[action] || action;
+      tr.appendChild(td);
+    });
+    return tr;
+  }
+
+  function sectionHeader(label) {
+    const tr = document.createElement('tr');
+    tr.className = 'section-header';
+    const td = document.createElement('td');
+    td.colSpan = 11; td.textContent = label;
+    tr.appendChild(td);
+    return tr;
+  }
+
+  const table = document.createElement('table');
+  table.className = 'strategy-table';
+
+  // Header row
+  const thead = document.createElement('thead');
+  const hrow = document.createElement('tr');
+  ['', ...dealers].forEach(d => {
+    const th = document.createElement('th'); th.textContent = d; hrow.appendChild(th);
+  });
+  thead.appendChild(hrow);
+  table.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+
+  // Hard totals 8–16
+  tbody.appendChild(sectionHeader('Hard Totals'));
+  for (let t = 16; t >= 8; t--) {
+    const a = Math.min(10, t - 2), b = t - a;
+    const cards = [
+      { rank: a === 10 ? '10' : String(a), suit: '♠' },
+      { rank: b === 10 ? '10' : String(b), suit: '♣' }
+    ];
+    tbody.appendChild(makeRow(`Hard ${t}`, cards));
+  }
+
+  // Soft totals A,2–A,9 (soft 13–20)
+  tbody.appendChild(sectionHeader('Soft Totals (Ace +)'));
+  for (let nv = 9; nv >= 2; nv--) {
+    const cards = [{ rank: 'A', suit: '♠' }, { rank: String(nv), suit: '♣' }];
+    tbody.appendChild(makeRow(`A, ${nv}  (Soft ${11+nv})`, cards));
+  }
+
+  // Pairs
+  tbody.appendChild(sectionHeader('Pairs'));
+  const pairDefs = [
+    ['A, A',   [{rank:'A',  suit:'♠'},{rank:'A',  suit:'♣'}]],
+    ['10, 10',  [{rank:'10', suit:'♠'},{rank:'10', suit:'♣'}]],
+    ['9, 9',   [{rank:'9',  suit:'♠'},{rank:'9',  suit:'♣'}]],
+    ['8, 8',   [{rank:'8',  suit:'♠'},{rank:'8',  suit:'♣'}]],
+    ['7, 7',   [{rank:'7',  suit:'♠'},{rank:'7',  suit:'♣'}]],
+    ['6, 6',   [{rank:'6',  suit:'♠'},{rank:'6',  suit:'♣'}]],
+    ['5, 5',   [{rank:'5',  suit:'♠'},{rank:'5',  suit:'♣'}]],
+    ['4, 4',   [{rank:'4',  suit:'♠'},{rank:'4',  suit:'♣'}]],
+    ['3, 3',   [{rank:'3',  suit:'♠'},{rank:'3',  suit:'♣'}]],
+    ['2, 2',   [{rank:'2',  suit:'♠'},{rank:'2',  suit:'♣'}]],
+  ];
+  pairDefs.forEach(([label, cards]) => tbody.appendChild(makeRow(label, cards)));
+
+  table.appendChild(tbody);
+
+  // Legend
+  const legend = document.createElement('div');
+  legend.className = 'chart-legend';
+  [['H','Hit','cell-H'],['S','Stand','cell-S'],['D','Double','cell-D'],['P','Split','cell-P'],['R','Surrender','cell-R']].forEach(([code, name, cls]) => {
+    const span = document.createElement('span');
+    const sw = document.createElement('div');
+    sw.className = `legend-swatch ${cls}`;
+    span.append(sw, ` ${code} — ${name}`);
+    legend.appendChild(span);
+  });
+
+  body.innerHTML = '';
+  body.appendChild(legend);
+  body.appendChild(table);
 }
 
 // ─── Init ────────────────────────────────────────────────────────────────────
+loadState();
 deal();
 </script>
 </body>
