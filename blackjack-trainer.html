@@ -258,6 +258,13 @@
     <span class="das-badge on" id="dasBadge">ON</span>
   </label>
 </div>
+<div class="das-toggle">
+  <label>
+    <input type="checkbox" id="surrenderToggle" checked onchange="onSurrenderChange()" />
+    Late Surrender
+    <span class="das-badge on" id="surrenderBadge">ON</span>
+  </label>
+</div>
 
 <div class="scoreboard">
   <div class="score-item">
@@ -358,6 +365,8 @@ function dealerIndex(rank) {
 
 // DAS state — read by basicStrategy
 let dasEnabled = true;
+// Surrender state — read by basicStrategy
+let surrenderEnabled = true;
 
 // Actions: H=Hit, S=Stand, D=Double Down, P=Split, R=Surrender
 function basicStrategy(playerCards, dealerRank) {
@@ -387,8 +396,9 @@ function basicStrategy(playerCards, dealerRank) {
     }
 
     if (pv === 8) {
-      // Surrender vs dealer 10; Split vs all others
-      return di === 8 ? 'R' : 'P';
+      // Surrender vs dealer 10 (if allowed); Split vs all others
+      if (di === 8) return surrenderEnabled ? 'R' : 'P';
+      return 'P';
     }
 
     if (pv === 7) {
@@ -457,7 +467,7 @@ function basicStrategy(playerCards, dealerRank) {
   //   Hard 15 vs 10, A     → Surrender
   //   Hard 14 vs 10        → Surrender
 
-  if (total >= 14 && total <= 16) {
+  if (surrenderEnabled && total >= 14 && total <= 16) {
     if (total === 16 && (di === 7 || di === 8 || di === 9)) return 'R';
     if (total === 15 && (di === 8 || di === 9))             return 'R';
     if (total === 14 && di === 8)                           return 'R';
@@ -512,6 +522,9 @@ function deal() {
 
   // Split only available when player has a pair
   document.getElementById('btnSplit').disabled = !isPair(playerCards);
+
+  // Surrender button only shown when the table allows it
+  document.querySelector('.action-surrender').style.display = surrenderEnabled ? '' : 'none';
 
   renderHands();
   updateHandInfo();
@@ -634,6 +647,15 @@ function onDasChange() {
   const badge = document.getElementById('dasBadge');
   badge.textContent = dasEnabled ? 'ON' : 'OFF';
   badge.className   = dasEnabled ? 'das-badge on' : 'das-badge off';
+  deal(); // re-deal so current hand reflects new rule
+}
+
+// ─── Surrender Toggle ────────────────────────────────────────────────────────
+function onSurrenderChange() {
+  surrenderEnabled = document.getElementById('surrenderToggle').checked;
+  const badge = document.getElementById('surrenderBadge');
+  badge.textContent = surrenderEnabled ? 'ON' : 'OFF';
+  badge.className   = surrenderEnabled ? 'das-badge on' : 'das-badge off';
   deal(); // re-deal so current hand reflects new rule
 }
 
