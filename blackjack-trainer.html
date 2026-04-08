@@ -244,6 +244,55 @@
 
     .das-badge.on  { background: #15803d; color: #bbf7d0; }
     .das-badge.off { background: #7f1d1d; color: #fecaca; }
+
+    /* ── Split hands layout ──────────────────────────────────────────────── */
+    .split-hands-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .split-hand-col {
+      flex: 1;
+      border: 2px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      padding: 8px;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .split-hand-col.active {
+      border-color: #fbbf24;
+      background: rgba(251,191,36,0.07);
+    }
+
+    .split-hand-col > .hand-label { font-size: 0.68rem; margin-bottom: 6px; }
+
+    .split-hand-col .hand { min-height: 78px; gap: 5px; }
+
+    .split-hand-col .card {
+      width: 50px; height: 70px;
+      font-size: 0.78rem; padding: 3px 5px;
+    }
+    .split-hand-col .card-center { font-size: 1.1rem; }
+    .split-hand-col .card-top,
+    .split-hand-col .card-bottom { font-size: 0.75rem; }
+
+    .split-hand-value { font-size: 0.75rem; opacity: 0.75; margin-top: 5px; }
+
+    .btn-skip {
+      width: 100%;
+      padding: 8px;
+      border: none;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.07);
+      color: rgba(255,255,255,0.5);
+      font-size: 0.82rem;
+      cursor: pointer;
+      margin-bottom: 12px;
+      transition: background 0.2s, color 0.2s;
+      letter-spacing: 0.3px;
+    }
+    .btn-skip:hover { background: rgba(255,255,255,0.14); color: #fff; }
   </style>
 </head>
 <body>
@@ -289,6 +338,7 @@
 
   <div class="hand-label" id="handLabel">Your Hand</div>
   <div class="hand" id="playerHand"></div>
+  <div id="splitHandsRow" class="split-hands-row" style="display:none"></div>
 
   <div class="hand-info" id="handInfo"></div>
 
@@ -300,6 +350,9 @@
   </div>
   <div class="action-surrender">
     <button class="btn btn-surrender" id="btnSurrender" onclick="choose('R')">Surrender</button>
+  </div>
+  <div id="splitSkipArea" style="display:none">
+    <button class="btn-skip" onclick="skipRound()">Skip to Next Round</button>
   </div>
 
   <div class="feedback idle" id="feedback">
@@ -519,7 +572,11 @@ function deal() {
   inSplitMode = false;
   splitHands = [];
   splitHandIndex = 0;
+  document.getElementById('handLabel').style.display = '';
   document.getElementById('handLabel').textContent = 'Your Hand';
+  document.getElementById('playerHand').style.display = '';
+  document.getElementById('splitHandsRow').style.display = 'none';
+  document.getElementById('splitSkipArea').style.display = 'none';
 
   answered = false;
   playerCards = [randomCard(), randomCard()];
@@ -573,8 +630,11 @@ function updateHandInfo() {
   else if (soft) handDesc = `Soft ${total}`;
   else           handDesc = `Hard ${total}`;
 
+  const prefix = inSplitMode
+    ? `Hand ${splitHandIndex + 1} of ${splitHands.length}`
+    : 'Your hand';
   document.getElementById('handInfo').innerHTML =
-    `Your hand: <strong>${handDesc}</strong> &nbsp;|&nbsp; Dealer shows: <strong>${dealerUp}</strong>`;
+    `${prefix}: <strong>${handDesc}</strong> &nbsp;|&nbsp; Dealer shows: <strong>${dealerUp}</strong>`;
 }
 
 const actionLabels = { H: 'Hit', S: 'Stand', D: 'Double Down', P: 'Split', R: 'Surrender' };
@@ -609,40 +669,38 @@ function choose(action) {
     fb.innerHTML = `<span class="feedback-icon">❌</span><span><strong>Not quite.</strong> T-H Basic Strategy says <strong>${actionLabels[correctAction]}</strong>. ${why}</span>`;
   }
 
-  const btnNext = document.getElementById('btnNext');
-  btnNext.style.display = 'block';
-
-  // When the user splits with DAS enabled, queue up the split hands
-  if (action === 'P' && dasEnabled && !inSplitMode) {
-    splitHands = [
-      [playerCards[0], randomCard()],
-      [playerCards[1], randomCard()]
-    ];
-    btnNext.textContent = 'Play Split Hands →';
-    btnNext.onclick = startSplitPlay;
-  } else if (inSplitMode && splitHandIndex < splitHands.length - 1) {
-    // More split hands to play
-    const next = splitHandIndex + 1;
-    btnNext.textContent = `Split Hand ${next + 1} of ${splitHands.length} →`;
-    btnNext.onclick = () => showSplitHand(next);
+  // Correct split: auto-advance to split hands immediately (initial or re-split)
+  if (action === 'P' && isCorrect) {
+    if (!inSplitMode) {
+      splitHands = [
+        [playerCards[0], randomCard()],
+        [playerCards[1], randomCard()]
+      ];
+    } else {
+      // Re-split: replace current hand with two new hands
+      const [cA, cB] = splitHands[splitHandIndex];
+      splitHands.splice(splitHandIndex, 1, [cA, randomCard()], [cB, randomCard()]);
+    }
+    enterSplitHand(splitHandIndex, false); // keep "Correct!" feedback visible
   } else {
-    btnNext.textContent = 'Next Hand →';
-    btnNext.onclick = deal;
+    advanceSplitOrEnd();
   }
 }
 
-function startSplitPlay() {
+function enterSplitHand(index, resetFeedback = true) {
   inSplitMode = true;
-  showSplitHand(0);
-}
-
-function showSplitHand(index) {
   splitHandIndex = index;
   answered = false;
   playerCards = splitHands[index];
 
-  document.getElementById('handLabel').textContent =
-    `Split Hand ${index + 1} of ${splitHands.length}`;
+  // Show split layout, hide single-hand layout
+  document.getElementById('handLabel').style.display = 'none';
+  document.getElementById('playerHand').style.display = 'none';
+  document.getElementById('splitHandsRow').style.display = 'flex';
+  document.getElementById('splitSkipArea').style.display = 'block';
+
+  renderSplitHands(index);
+  updateHandInfo();
 
   ALL_BTN_IDS.forEach(id => {
     const b = document.getElementById(id);
@@ -650,19 +708,69 @@ function showSplitHand(index) {
     b.disabled = false;
   });
 
-  // No re-splitting during split hand play
-  document.getElementById('btnSplit').disabled = true;
-
-  // Surrender visibility
+  // Re-split allowed only if this hand is a pair and under the 4-hand limit
+  document.getElementById('btnSplit').disabled = !isPair(playerCards) || splitHands.length >= 4;
   document.querySelector('.action-surrender').style.display = surrenderEnabled ? '' : 'none';
 
-  renderHands();
-  updateHandInfo();
-
-  document.getElementById('feedback').className = 'feedback idle';
-  document.getElementById('feedback').innerHTML =
-    '<span class="feedback-icon">🃏</span><span>Make your move based on T-H Basic Strategy.</span>';
+  if (resetFeedback) {
+    document.getElementById('feedback').className = 'feedback idle';
+    document.getElementById('feedback').innerHTML =
+      '<span class="feedback-icon">🃏</span><span>Make your move based on T-H Basic Strategy.</span>';
+  }
   document.getElementById('btnNext').style.display = 'none';
+}
+
+function renderSplitHands(activeIndex) {
+  const row = document.getElementById('splitHandsRow');
+  row.innerHTML = '';
+  splitHands.forEach((hand, i) => {
+    const col = document.createElement('div');
+    col.className = `split-hand-col${i === activeIndex ? ' active' : ''}`;
+
+    const lbl = document.createElement('div');
+    lbl.className = 'hand-label';
+    lbl.textContent = `Hand ${i + 1}`;
+    col.appendChild(lbl);
+
+    const handEl = document.createElement('div');
+    handEl.className = 'hand';
+    hand.forEach(c => handEl.appendChild(makeCardEl(c)));
+    col.appendChild(handEl);
+
+    const val = document.createElement('div');
+    val.className = 'split-hand-value';
+    val.textContent = describeHand(hand);
+    col.appendChild(val);
+
+    row.appendChild(col);
+  });
+}
+
+function describeHand(cards) {
+  const total = handTotal(cards);
+  const soft  = isSoft(cards) && total <= 21;
+  const pair  = isPair(cards);
+  if (pair && cards[0].rank === 'A') return 'Pair of Aces';
+  if (pair) return `Pair of ${cards[0].rank}s`;
+  if (soft) return `Soft ${total}`;
+  return `Hard ${total}`;
+}
+
+function advanceSplitOrEnd() {
+  const btnNext = document.getElementById('btnNext');
+  btnNext.style.display = 'block';
+  if (inSplitMode && splitHandIndex < splitHands.length - 1) {
+    const nextIndex = splitHandIndex + 1;
+    btnNext.textContent = 'Next Split Hand →';
+    btnNext.onclick = () => enterSplitHand(nextIndex);
+  } else {
+    btnNext.textContent = 'Next Hand →';
+    btnNext.onclick = deal;
+  }
+}
+
+function skipRound() {
+  deal();
 }
 
 function updateScore() {
