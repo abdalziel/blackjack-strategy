@@ -626,7 +626,7 @@ function updateHandInfo() {
 
   let handDesc = '';
   if (pair && playerCards[0].rank === 'A') handDesc = 'Pair of Aces';
-  else if (pair) handDesc = `Pair of ${playerCards[0].rank}s`;
+  else if (pair) handDesc = cardValue(playerCards[0].rank) === 10 ? 'Pair of 10s' : `Pair of ${playerCards[0].rank}s`;
   else if (soft) handDesc = `Soft ${total}`;
   else           handDesc = `Hard ${total}`;
 
@@ -751,7 +751,7 @@ function describeHand(cards) {
   const soft  = isSoft(cards) && total <= 21;
   const pair  = isPair(cards);
   if (pair && cards[0].rank === 'A') return 'Pair of Aces';
-  if (pair) return `Pair of ${cards[0].rank}s`;
+  if (pair) return cardValue(cards[0].rank) === 10 ? 'Pair of 10s' : `Pair of ${cards[0].rank}s`;
   if (soft) return `Soft ${total}`;
   return `Hard ${total}`;
 }
