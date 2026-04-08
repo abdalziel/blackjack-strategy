@@ -287,7 +287,7 @@
 
   <hr class="divider" />
 
-  <div class="hand-label">Your Hand</div>
+  <div class="hand-label" id="handLabel">Your Hand</div>
   <div class="hand" id="playerHand"></div>
 
   <div class="hand-info" id="handInfo"></div>
@@ -307,7 +307,7 @@
     <span>Make your move based on T-H Basic Strategy.</span>
   </div>
 
-  <button class="btn-next" id="btnNext" onclick="deal()" style="display:none">Next Hand &rarr;</button>
+  <button class="btn-next" id="btnNext" style="display:none">Next Hand &rarr;</button>
 </div>
 
 <p class="strategy-hint">Based on: T-H Basic Blackjack by T. Hopper &mdash; Hard totals · Soft totals · Pairs · Late Surrender</p>
@@ -507,9 +507,20 @@ let playerCards = [], dealerCards = [];
 let correct = 0, total_hands = 0;
 let answered = false;
 
+// Split mode state
+let splitHands = [];
+let splitHandIndex = 0;
+let inSplitMode = false;
+
 const ALL_BTN_IDS = ['btnHit','btnStand','btnDouble','btnSplit','btnSurrender'];
 
 function deal() {
+  // Reset split mode
+  inSplitMode = false;
+  splitHands = [];
+  splitHandIndex = 0;
+  document.getElementById('handLabel').textContent = 'Your Hand';
+
   answered = false;
   playerCards = [randomCard(), randomCard()];
   dealerCards = [randomCard(), randomCard()]; // index 0 = face-down, 1 = face-up
@@ -532,7 +543,11 @@ function deal() {
   document.getElementById('feedback').className = 'feedback idle';
   document.getElementById('feedback').innerHTML =
     '<span class="feedback-icon">🃏</span><span>Make your move based on T-H Basic Strategy.</span>';
-  document.getElementById('btnNext').style.display = 'none';
+
+  const btnNext = document.getElementById('btnNext');
+  btnNext.textContent = 'Next Hand →';
+  btnNext.onclick = deal;
+  btnNext.style.display = 'none';
 }
 
 function renderHands() {
@@ -594,7 +609,60 @@ function choose(action) {
     fb.innerHTML = `<span class="feedback-icon">❌</span><span><strong>Not quite.</strong> T-H Basic Strategy says <strong>${actionLabels[correctAction]}</strong>. ${why}</span>`;
   }
 
-  document.getElementById('btnNext').style.display = 'block';
+  const btnNext = document.getElementById('btnNext');
+  btnNext.style.display = 'block';
+
+  // When the user splits with DAS enabled, queue up the split hands
+  if (action === 'P' && dasEnabled && !inSplitMode) {
+    splitHands = [
+      [playerCards[0], randomCard()],
+      [playerCards[1], randomCard()]
+    ];
+    btnNext.textContent = 'Play Split Hands →';
+    btnNext.onclick = startSplitPlay;
+  } else if (inSplitMode && splitHandIndex < splitHands.length - 1) {
+    // More split hands to play
+    const next = splitHandIndex + 1;
+    btnNext.textContent = `Split Hand ${next + 1} of ${splitHands.length} →`;
+    btnNext.onclick = () => showSplitHand(next);
+  } else {
+    btnNext.textContent = 'Next Hand →';
+    btnNext.onclick = deal;
+  }
+}
+
+function startSplitPlay() {
+  inSplitMode = true;
+  showSplitHand(0);
+}
+
+function showSplitHand(index) {
+  splitHandIndex = index;
+  answered = false;
+  playerCards = splitHands[index];
+
+  document.getElementById('handLabel').textContent =
+    `Split Hand ${index + 1} of ${splitHands.length}`;
+
+  ALL_BTN_IDS.forEach(id => {
+    const b = document.getElementById(id);
+    b.className = b.className.replace(/\s*(correct|wrong|reveal)\b/g, '');
+    b.disabled = false;
+  });
+
+  // No re-splitting during split hand play
+  document.getElementById('btnSplit').disabled = true;
+
+  // Surrender visibility
+  document.querySelector('.action-surrender').style.display = surrenderEnabled ? '' : 'none';
+
+  renderHands();
+  updateHandInfo();
+
+  document.getElementById('feedback').className = 'feedback idle';
+  document.getElementById('feedback').innerHTML =
+    '<span class="feedback-icon">🃏</span><span>Make your move based on T-H Basic Strategy.</span>';
+  document.getElementById('btnNext').style.display = 'none';
 }
 
 function updateScore() {
