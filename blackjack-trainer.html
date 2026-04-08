@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blackjack Basic Strategy Trainer</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #1a6b3c;
+      background-image: radial-gradient(ellipse at center, #1e7d47 0%, #0f4a28 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px;
+      color: #fff;
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.4);
+    }
+
+    .subtitle {
+      font-size: 0.85rem;
+      opacity: 0.7;
+      margin-bottom: 24px;
+    }
+
+    .scoreboard {
+      display: flex;
+      gap: 24px;
+      margin-bottom: 20px;
+    }
+
+    .score-item {
+      text-align: center;
+      background: rgba(0,0,0,0.25);
+      border-radius: 10px;
+      padding: 8px 20px;
+    }
+
+    .score-label { font-size: 0.7rem; opacity: 0.7; text-transform: uppercase; letter-spacing: 1px; }
+    .score-value { font-size: 1.5rem; font-weight: 700; }
+    .score-correct { color: #6ee87a; }
+    .score-wrong   { color: #f87171; }
+    .score-pct     { color: #fbbf24; }
+
+    .table-area {
+      background: #166534;
+      border: 3px solid #15803d;
+      border-radius: 20px;
+      padding: 28px 32px;
+      width: 100%;
+      max-width: 680px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+
+    .hand-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      opacity: 0.65;
+      margin-bottom: 8px;
+    }
+
+    .hand {
+      display: flex;
+      gap: 12px;
+      min-height: 110px;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .card {
+      width: 72px;
+      height: 100px;
+      border-radius: 8px;
+      background: #fff;
+      border: 2px solid #ddd;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 5px 7px;
+      font-weight: 700;
+      font-size: 1.1rem;
+      box-shadow: 2px 3px 8px rgba(0,0,0,0.35);
+      position: relative;
+      user-select: none;
+    }
+
+    .card.red { color: #dc2626; }
+    .card.black { color: #1e1e1e; }
+
+    .card-top { font-size: 0.95rem; line-height: 1; }
+    .card-center { font-size: 1.6rem; text-align: center; line-height: 1; }
+    .card-bottom { font-size: 0.95rem; line-height: 1; transform: rotate(180deg); align-self: flex-end; }
+
+    .card.face-down {
+      background: linear-gradient(135deg, #1e40af 25%, #1d4ed8 25%, #1d4ed8 50%, #1e40af 50%, #1e40af 75%, #1d4ed8 75%);
+      background-size: 12px 12px;
+      border: 2px solid #1e40af;
+    }
+
+    .hand-info {
+      font-size: 0.85rem;
+      opacity: 0.8;
+      margin-bottom: 24px;
+    }
+
+    .hand-info strong { color: #fde68a; font-size: 1rem; }
+
+    .divider {
+      border: none;
+      border-top: 1px solid rgba(255,255,255,0.15);
+      margin: 4px 0 20px;
+    }
+
+    /* 2x2 grid for the main 4 buttons */
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    /* Surrender spans full width below */
+    .action-surrender {
+      margin-bottom: 16px;
+    }
+
+    .btn {
+      padding: 14px;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.1s, opacity 0.15s, box-shadow 0.15s;
+      letter-spacing: 0.5px;
+      width: 100%;
+    }
+
+    .btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+    .btn:active:not(:disabled) { transform: translateY(0); }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .btn-hit       { background: #2563eb; color: #fff; }
+    .btn-stand     { background: #dc2626; color: #fff; }
+    .btn-double    { background: #d97706; color: #fff; }
+    .btn-split     { background: #7c3aed; color: #fff; }
+    .btn-surrender { background: #475569; color: #fff; }
+
+    .btn.correct  { background: #16a34a !important; box-shadow: 0 0 0 3px #86efac; }
+    .btn.wrong    { background: #b91c1c !important; box-shadow: 0 0 0 3px #fca5a5; }
+    .btn.reveal   { box-shadow: 0 0 0 3px #fde68a; }
+
+    .feedback {
+      min-height: 64px;
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 0.95rem;
+      line-height: 1.5;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+      transition: background 0.2s;
+    }
+
+    .feedback.correct { background: rgba(22,163,74,0.3); border: 1px solid #16a34a; }
+    .feedback.wrong   { background: rgba(185,28,28,0.3); border: 1px solid #b91c1c; }
+    .feedback.idle    { background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.1); opacity: 0.6; }
+
+    .feedback-icon { font-size: 1.4rem; flex-shrink: 0; }
+
+    .btn-next {
+      width: 100%;
+      padding: 13px;
+      border: none;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.15);
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+      letter-spacing: 0.5px;
+    }
+
+    .btn-next:hover { background: rgba(255,255,255,0.25); }
+
+    .strategy-hint {
+      margin-top: 20px;
+      font-size: 0.78rem;
+      opacity: 0.5;
+      text-align: center;
+    }
+
+    /* DAS toggle */
+    .das-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 20px;
+      font-size: 0.85rem;
+    }
+
+    .das-toggle label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      background: rgba(0,0,0,0.25);
+      border-radius: 8px;
+      padding: 8px 16px;
+      user-select: none;
+    }
+
+    .das-toggle label:hover { background: rgba(0,0,0,0.35); }
+
+    .das-toggle input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+      accent-color: #fbbf24;
+    }
+
+    .das-badge {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      padding: 2px 8px;
+      border-radius: 20px;
+      margin-left: 4px;
+    }
+
+    .das-badge.on  { background: #15803d; color: #bbf7d0; }
+    .das-badge.off { background: #7f1d1d; color: #fecaca; }
+  </style>
+</head>
+<body>
+
+<h1>Blackjack Strategy Trainer</h1>
+<p class="subtitle">T-H Basic Strategy &mdash; T. Hopper &mdash; Late Surrender, 6 decks</p>
+
+<div class="das-toggle">
+  <label>
+    <input type="checkbox" id="dasToggle" checked onchange="onDasChange()" />
+    Double After Split (DAS)
+    <span class="das-badge on" id="dasBadge">ON</span>
+  </label>
+</div>
+
+<div class="scoreboard">
+  <div class="score-item">
+    <div class="score-label">Correct</div>
+    <div class="score-value score-correct" id="scoreCorrect">0</div>
+  </div>
+  <div class="score-item">
+    <div class="score-label">Wrong</div>
+    <div class="score-value score-wrong" id="scoreWrong">0</div>
+  </div>
+  <div class="score-item">
+    <div class="score-label">Accuracy</div>
+    <div class="score-value score-pct" id="scorePct">—</div>
+  </div>
+</div>
+
+<div class="table-area">
+  <div class="hand-label">Dealer</div>
+  <div class="hand" id="dealerHand"></div>
+
+  <hr class="divider" />
+
+  <div class="hand-label">Your Hand</div>
+  <div class="hand" id="playerHand"></div>
+
+  <div class="hand-info" id="handInfo"></div>
+
+  <div class="actions">
+    <button class="btn btn-hit"    id="btnHit"    onclick="choose('H')">Hit</button>
+    <button class="btn btn-stand"  id="btnStand"  onclick="choose('S')">Stand</button>
+    <button class="btn btn-double" id="btnDouble" onclick="choose('D')">Double Down</button>
+    <button class="btn btn-split"  id="btnSplit"  onclick="choose('P')">Split</button>
+  </div>
+  <div class="action-surrender">
+    <button class="btn btn-surrender" id="btnSurrender" onclick="choose('R')">Surrender</button>
+  </div>
+
+  <div class="feedback idle" id="feedback">
+    <span class="feedback-icon">🃏</span>
+    <span>Make your move based on T-H Basic Strategy.</span>
+  </div>
+
+  <button class="btn-next" id="btnNext" onclick="deal()" style="display:none">Next Hand &rarr;</button>
+</div>
+
+<p class="strategy-hint">Based on: T-H Basic Blackjack by T. Hopper &mdash; Hard totals · Soft totals · Pairs · Late Surrender</p>
+
+<script>
+// ─── Card Data ──────────────────────────────────────────────────────────────
+const RANKS = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+const SUITS = ['♠','♥','♦','♣'];
+const RED_SUITS = new Set(['♥','♦']);
+
+function randomCard() {
+  return { rank: RANKS[Math.floor(Math.random() * RANKS.length)], suit: SUITS[Math.floor(Math.random() * 4)] };
+}
+
+function cardValue(rank) {
+  if (rank === 'A') return 11;
+  if (['10','J','Q','K'].includes(rank)) return 10;
+  return parseInt(rank);
+}
+
+function handTotal(cards) {
+  let total = 0, aces = 0;
+  for (const c of cards) {
+    if (c.rank === 'A') { total += 11; aces++; }
+    else total += cardValue(c.rank);
+  }
+  while (total > 21 && aces > 0) { total -= 10; aces--; }
+  return total;
+}
+
+function isSoft(cards) {
+  let total = 0, aces = 0;
+  for (const c of cards) {
+    if (c.rank === 'A') { total += 11; aces++; }
+    else total += cardValue(c.rank);
+  }
+  let softAces = aces;
+  while (total > 21 && softAces > 0) { total -= 10; softAces--; }
+  return softAces > 0;
+}
+
+function isPair(cards) {
+  if (cards.length !== 2) return false;
+  return cardValue(cards[0].rank) === cardValue(cards[1].rank);
+}
+
+// ─── T-H Basic Strategy ─────────────────────────────────────────────────────
+// Dealer upcard → index 0–9 maps to: 2,3,4,5,6,7,8,9,10,A
+function dealerIndex(rank) {
+  if (rank === 'A') return 9;
+  const v = cardValue(rank);
+  if (v >= 10) return 8;
+  return v - 2;
+}
+
+// DAS state — read by basicStrategy
+let dasEnabled = true;
+
+// Actions: H=Hit, S=Stand, D=Double Down, P=Split, R=Surrender
+function basicStrategy(playerCards, dealerRank) {
+  const di   = dealerIndex(dealerRank);
+  const total = handTotal(playerCards);
+  const soft  = isSoft(playerCards);
+  const pair  = isPair(playerCards);
+  const das   = dasEnabled;
+
+  // ── Pairs ─────────────────────────────────────────────────────────────────
+  // T-H with DAS:  2,2 / 3,3 / 6,6 / 7,7 split vs 2–7
+  // T-H no DAS:    cells that relied on doubling after split revert to Hit:
+  //   2,2 → split vs 4–7 only  (Hit vs 2–3)
+  //   3,3 → split vs 4–7 only  (Hit vs 2–3)
+  //   6,6 → split vs 3–6 only  (Hit vs 2)
+  //   7,7 — unaffected (no double after split benefit)
+  if (pair) {
+    const pv = cardValue(playerCards[0].rank);
+
+    if (pv === 1)  return 'P';  // A,A — always split
+    if (pv === 10) return 'S';  // 10,10 — always stand
+
+    if (pv === 9) {
+      // Split vs 2–6 and 8–9; Stand vs 7, 10, A
+      //             2   3   4   5   6   7   8   9  10   A
+      return ['P','P','P','P','P','S','P','P','S','S'][di];
+    }
+
+    if (pv === 8) {
+      // Surrender vs dealer 10; Split vs all others
+      return di === 8 ? 'R' : 'P';
+    }
+
+    if (pv === 7) {
+      // Split vs 2–7; Hit otherwise — same with or without DAS
+      return di <= 5 ? 'P' : 'H';
+    }
+
+    if (pv === 6) {
+      // DAS:  Split vs 2–7
+      // NDAS: Split vs 3–6 (dealer 2 becomes Hit)
+      if (das)  return di <= 5 ? 'P' : 'H';
+      else      return (di >= 1 && di <= 4) ? 'P' : 'H';
+    }
+
+    if (pv === 5) {
+      // Never split 5,5 — treat as hard 10
+      return di <= 7 ? 'D' : 'H';
+    }
+
+    if (pv === 4) {
+      // Treat as hard 8 — always Hit (no split regardless of DAS)
+      return 'H';
+    }
+
+    if (pv === 3) {
+      // DAS:  Split vs 2–7
+      // NDAS: Split vs 4–7 (dealer 2–3 become Hit)
+      if (das)  return di <= 5 ? 'P' : 'H';
+      else      return (di >= 2 && di <= 5) ? 'P' : 'H';
+    }
+
+    if (pv === 2) {
+      // DAS:  Split vs 2–7
+      // NDAS: Split vs 4–7 (dealer 2–3 become Hit)
+      if (das)  return di <= 5 ? 'P' : 'H';
+      else      return (di >= 2 && di <= 5) ? 'P' : 'H';
+    }
+  }
+
+  // ── Soft Totals ────────────────────────────────────────────────────────────
+  // T-H simplified rule: A,2–A,7 Double vs 4–6; A,7 Stand vs 2,3,7,8 else Hit;
+  // A,8 and A,9 always Stand.
+  if (soft && playerCards.length === 2) {
+    const nonAce = playerCards.find(c => c.rank !== 'A');
+    if (nonAce) {
+      const nv = cardValue(nonAce.rank);
+
+      if (nv >= 8) return 'S'; // A,8 / A,9 — stand always
+
+      if (nv === 7) {
+        // A,7 (soft 18): Double vs 4–6; Stand vs 2,3,7,8; Hit vs 9,10,A
+        if (di >= 2 && di <= 4) return 'D'; // dealer 4,5,6
+        if (di === 0 || di === 1 || di === 5 || di === 6) return 'S'; // dealer 2,3,7,8
+        return 'H'; // dealer 9,10,A
+      }
+
+      // A,2 through A,6: Double vs 4–6, Hit otherwise
+      if (di >= 2 && di <= 4) return 'D'; // dealer 4,5,6
+      return 'H';
+    }
+  }
+
+  // ── Hard Totals ────────────────────────────────────────────────────────────
+  // T-H Surrender rules (checked before stand/hit):
+  //   Hard 16 vs 9, 10, A  → Surrender
+  //   Hard 15 vs 10, A     → Surrender
+  //   Hard 14 vs 10        → Surrender
+
+  if (total >= 14 && total <= 16) {
+    if (total === 16 && (di === 7 || di === 8 || di === 9)) return 'R';
+    if (total === 15 && (di === 8 || di === 9))             return 'R';
+    if (total === 14 && di === 8)                           return 'R';
+  }
+
+  // Hard doubles
+  if (total === 11) return di <= 8 ? 'D' : 'H';  // Double vs 2–10, Hit vs A
+  if (total === 10) return di <= 7 ? 'D' : 'H';  // Double vs 2–9, Hit vs 10/A
+  if (total === 9)  return di <= 4 ? 'D' : 'H';  // Double vs 2–6, Hit otherwise
+
+  // Hard stand/hit
+  if (total >= 17)                return 'S';
+  if (total >= 13 && total <= 16) return di <= 4 ? 'S' : 'H'; // Stand vs 2–6
+  if (total === 12)               return (di >= 2 && di <= 4) ? 'S' : 'H'; // Stand vs 4–6
+  return 'H'; // 8 or less
+}
+
+// ─── Render Cards ────────────────────────────────────────────────────────────
+function makeCardEl(card, faceDown = false) {
+  const el = document.createElement('div');
+  if (faceDown) {
+    el.className = 'card face-down';
+    return el;
+  }
+  const isRed = RED_SUITS.has(card.suit);
+  el.className = `card ${isRed ? 'red' : 'black'}`;
+  el.innerHTML = `
+    <div class="card-top">${card.rank}${card.suit}</div>
+    <div class="card-center">${card.suit}</div>
+    <div class="card-bottom">${card.rank}${card.suit}</div>
+  `;
+  return el;
+}
+
+// ─── Game State ──────────────────────────────────────────────────────────────
+let playerCards = [], dealerCards = [];
+let correct = 0, total_hands = 0;
+let answered = false;
+
+const ALL_BTN_IDS = ['btnHit','btnStand','btnDouble','btnSplit','btnSurrender'];
+
+function deal() {
+  answered = false;
+  playerCards = [randomCard(), randomCard()];
+  dealerCards = [randomCard(), randomCard()]; // index 0 = face-down, 1 = face-up
+
+  ALL_BTN_IDS.forEach(id => {
+    const b = document.getElementById(id);
+    b.className = b.className.replace(/\s*(correct|wrong|reveal)\b/g, '');
+    b.disabled = false;
+  });
+
+  // Split only available when player has a pair
+  document.getElementById('btnSplit').disabled = !isPair(playerCards);
+
+  renderHands();
+  updateHandInfo();
+
+  document.getElementById('feedback').className = 'feedback idle';
+  document.getElementById('feedback').innerHTML =
+    '<span class="feedback-icon">🃏</span><span>Make your move based on T-H Basic Strategy.</span>';
+  document.getElementById('btnNext').style.display = 'none';
+}
+
+function renderHands() {
+  const dh = document.getElementById('dealerHand');
+  dh.innerHTML = '';
+  dh.appendChild(makeCardEl(dealerCards[0], true));
+  dh.appendChild(makeCardEl(dealerCards[1]));
+
+  const ph = document.getElementById('playerHand');
+  ph.innerHTML = '';
+  playerCards.forEach(c => ph.appendChild(makeCardEl(c)));
+}
+
+function updateHandInfo() {
+  const total    = handTotal(playerCards);
+  const soft     = isSoft(playerCards) && total <= 21;
+  const pair     = isPair(playerCards);
+  const dealerUp = dealerCards[1].rank;
+
+  let handDesc = '';
+  if (pair && playerCards[0].rank === 'A') handDesc = 'Pair of Aces';
+  else if (pair) handDesc = `Pair of ${playerCards[0].rank}s`;
+  else if (soft) handDesc = `Soft ${total}`;
+  else           handDesc = `Hard ${total}`;
+
+  document.getElementById('handInfo').innerHTML =
+    `Your hand: <strong>${handDesc}</strong> &nbsp;|&nbsp; Dealer shows: <strong>${dealerUp}</strong>`;
+}
+
+const actionLabels = { H: 'Hit', S: 'Stand', D: 'Double Down', P: 'Split', R: 'Surrender' };
+const btnIds       = { H: 'btnHit', S: 'btnStand', D: 'btnDouble', P: 'btnSplit', R: 'btnSurrender' };
+
+function choose(action) {
+  if (answered) return;
+  answered = true;
+
+  const correctAction = basicStrategy(playerCards, dealerCards[1].rank);
+  const isCorrect = action === correctAction;
+
+  ALL_BTN_IDS.forEach(id => { document.getElementById(id).disabled = true; });
+
+  document.getElementById(btnIds[action]).classList.add(isCorrect ? 'correct' : 'wrong');
+  if (!isCorrect) {
+    const cb = document.getElementById(btnIds[correctAction]);
+    if (cb) cb.classList.add('reveal');
+  }
+
+  total_hands++;
+  if (isCorrect) correct++;
+  updateScore();
+
+  const fb = document.getElementById('feedback');
+  if (isCorrect) {
+    fb.className = 'feedback correct';
+    fb.innerHTML = `<span class="feedback-icon">✅</span><span><strong>Correct!</strong> ${actionLabels[correctAction]} is the right T-H Basic Strategy play here.</span>`;
+  } else {
+    const why = getExplanation(playerCards, dealerCards[1].rank, correctAction);
+    fb.className = 'feedback wrong';
+    fb.innerHTML = `<span class="feedback-icon">❌</span><span><strong>Not quite.</strong> T-H Basic Strategy says <strong>${actionLabels[correctAction]}</strong>. ${why}</span>`;
+  }
+
+  document.getElementById('btnNext').style.display = 'block';
+}
+
+function updateScore() {
+  document.getElementById('scoreCorrect').textContent = correct;
+  document.getElementById('scoreWrong').textContent   = total_hands - correct;
+  const pct = total_hands > 0 ? Math.round((correct / total_hands) * 100) : 0;
+  document.getElementById('scorePct').textContent     = total_hands > 0 ? pct + '%' : '—';
+}
+
+function getExplanation(cards, dealerRank, correctAction) {
+  const total = handTotal(cards);
+  const soft  = isSoft(cards);
+  const pair  = isPair(cards);
+  const dv    = cardValue(dealerRank);
+
+  if (correctAction === 'R') {
+    return `T-H Basic Strategy calls for late surrender here — you give up half your bet rather than playing out a losing hand.`;
+  }
+  if (pair) {
+    if (correctAction === 'P') return `Splitting this pair is correct T-H strategy${dasEnabled ? ' with DAS' : ''}.`;
+    if (correctAction === 'D') return `Treat this pair as a hard ${total} — Double is optimal here.`;
+    if (correctAction === 'S') return `Keep the pair together; standing is correct with this strong total.`;
+    return dasEnabled
+      ? `The pair is best played by hitting in this spot.`
+      : `Without Double After Split available, splitting here loses its advantage — Hit instead.`;
+  }
+  if (soft) {
+    if (correctAction === 'D') return `T-H strategy: Double soft hands vs dealer 4–6.`;
+    if (correctAction === 'S') return `Soft ${total} is strong enough to stand here.`;
+    return `Take a card — soft hands can't bust on one hit.`;
+  }
+  // Hard
+  if (correctAction === 'D') {
+    if (total === 9)  return `Hard 9 — Double vs dealer 2–6 per T-H strategy.`;
+    if (total === 10) return `Hard 10 — Double vs dealer 2–9 per T-H strategy.`;
+    if (total === 11) return `Hard 11 — Double vs dealer 2–10 per T-H strategy.`;
+    return `Hard ${total} vs dealer ${dealerRank} is a prime doubling spot.`;
+  }
+  if (correctAction === 'S') {
+    return dv <= 6
+      ? `Dealer shows a bust card (${dealerRank}) — stand and let the dealer take the risk.`
+      : `Stand on hard ${total} here per T-H strategy.`;
+  }
+  return `Hard ${total} needs improvement — take a card.`;
+}
+
+// ─── DAS Toggle ──────────────────────────────────────────────────────────────
+function onDasChange() {
+  dasEnabled = document.getElementById('dasToggle').checked;
+  const badge = document.getElementById('dasBadge');
+  badge.textContent = dasEnabled ? 'ON' : 'OFF';
+  badge.className   = dasEnabled ? 'das-badge on' : 'das-badge off';
+  deal(); // re-deal so current hand reflects new rule
+}
+
+// ─── Init ────────────────────────────────────────────────────────────────────
+deal();
+</script>
+</body>
+</html>
