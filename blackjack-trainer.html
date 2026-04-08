@@ -293,9 +293,97 @@
       letter-spacing: 0.3px;
     }
     .btn-skip:hover { background: rgba(255,255,255,0.14); color: #fff; }
+
+    /* ── Page layout ─────────────────────────────────────────── */
+    .page-layout {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+      width: 100%;
+      max-width: 1120px;
+    }
+
+    .main-col {
+      flex: 0 0 auto;
+      width: 100%;
+      max-width: 680px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ── Study Tracker panel ──────────────────────────────────── */
+    .tracker-panel {
+      flex: 1;
+      min-width: 220px;
+      background: rgba(0,0,0,0.25);
+      border-radius: 16px;
+      padding: 16px 14px;
+      position: sticky;
+      top: 24px;
+    }
+
+    .tracker-title {
+      font-size: 0.88rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-align: center;
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.15);
+    }
+
+    .tracker-header-row {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 0 6px;
+      font-size: 0.62rem;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      opacity: 0.5;
+      margin-bottom: 4px;
+    }
+    .tracker-header-row span:last-child { text-align: right; }
+
+    .tracker-entry {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 0 6px;
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      align-items: center;
+    }
+    .tracker-entry:last-child { border-bottom: none; }
+
+    .tracker-hand { font-size: 0.76rem; }
+    .tracker-dealer { font-size: 0.76rem; text-align: right; }
+
+    .tracker-tally {
+      font-family: 'Courier New', monospace;
+      font-size: 0.7rem;
+      text-align: center;
+      white-space: nowrap;
+      color: #fde68a;
+      letter-spacing: 1px;
+    }
+
+    .tracker-empty {
+      text-align: center;
+      opacity: 0.35;
+      font-size: 0.76rem;
+      padding: 18px 0;
+    }
+
+    @media (max-width: 860px) {
+      .page-layout { flex-direction: column; align-items: center; }
+      .tracker-panel { max-width: 680px; width: 100%; position: static; }
+    }
   </style>
 </head>
 <body>
+
+<div class="page-layout">
+<div class="main-col">
 
 <h1>Blackjack Strategy Trainer</h1>
 <p class="subtitle">T-H Basic Strategy &mdash; T. Hopper &mdash; Late Surrender, 6 decks</p>
@@ -364,6 +452,20 @@
 </div>
 
 <p class="strategy-hint">Based on: T-H Basic Blackjack by T. Hopper &mdash; Hard totals · Soft totals · Pairs · Late Surrender</p>
+
+</div><!-- end .main-col -->
+
+<div class="tracker-panel">
+  <div class="tracker-title">Study Tracker</div>
+  <div class="tracker-header-row">
+    <span>Your Hand</span><span></span><span>Dealer</span>
+  </div>
+  <div id="trackerList">
+    <div class="tracker-empty">No mistakes yet</div>
+  </div>
+</div>
+
+</div><!-- end .page-layout -->
 
 <script>
 // ─── Card Data ──────────────────────────────────────────────────────────────
@@ -667,6 +769,7 @@ function choose(action) {
     const why = getExplanation(playerCards, dealerCards[1].rank, correctAction);
     fb.className = 'feedback wrong';
     fb.innerHTML = `<span class="feedback-icon">❌</span><span><strong>Not quite.</strong> T-H Basic Strategy says <strong>${actionLabels[correctAction]}</strong>. ${why}</span>`;
+    trackMistake(playerCards, dealerCards[1].rank);
   }
 
   // Correct split: auto-advance to split hands immediately (initial or re-split)
@@ -815,6 +918,58 @@ function getExplanation(cards, dealerRank, correctAction) {
       : `Stand on hard ${total} here per T-H strategy.`;
   }
   return `Hard ${total} needs improvement — take a card.`;
+}
+
+// ─── Study Tracker ───────────────────────────────────────────────────────────
+const wrongCounts = {};
+
+function trackMistake(cards, dealerRank) {
+  const hand   = describeHand(cards);
+  const dealer = cardValue(dealerRank) >= 10 ? '10' : dealerRank;
+  const key    = `${hand}|${dealer}`;
+  wrongCounts[key] = (wrongCounts[key] || 0) + 1;
+  updateTracker();
+}
+
+function updateTracker() {
+  const entries = Object.entries(wrongCounts).sort((a, b) => b[1] - a[1]);
+  const list = document.getElementById('trackerList');
+  list.innerHTML = '';
+
+  if (entries.length === 0) {
+    list.innerHTML = '<div class="tracker-empty">No mistakes yet</div>';
+    return;
+  }
+
+  entries.forEach(([key, count]) => {
+    const [hand, dealer] = key.split('|');
+    const row = document.createElement('div');
+    row.className = 'tracker-entry';
+
+    const handEl = document.createElement('span');
+    handEl.className = 'tracker-hand';
+    handEl.textContent = hand;
+
+    const tallyEl = document.createElement('span');
+    tallyEl.className = 'tracker-tally';
+    tallyEl.innerHTML = tallyString(count);
+
+    const dealerEl = document.createElement('span');
+    dealerEl.className = 'tracker-dealer';
+    dealerEl.textContent = dealer;
+
+    row.append(handEl, tallyEl, dealerEl);
+    list.appendChild(row);
+  });
+}
+
+function tallyString(n) {
+  let s = '';
+  const full = Math.floor(n / 5);
+  const rem  = n % 5;
+  for (let i = 0; i < full; i++) s += '||||/ ';
+  if (rem) s += '|'.repeat(rem);
+  return s.trim();
 }
 
 // ─── DAS Toggle ──────────────────────────────────────────────────────────────
