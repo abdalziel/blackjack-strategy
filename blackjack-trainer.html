@@ -579,7 +579,7 @@ function deal() {
   document.getElementById('splitSkipArea').style.display = 'none';
 
   answered = false;
-  playerCards = [randomCard(), randomCard()];
+  do { playerCards = [randomCard(), randomCard()]; } while (handTotal(playerCards) === 21);
   dealerCards = [randomCard(), randomCard()]; // index 0 = face-down, 1 = face-up
 
   ALL_BTN_IDS.forEach(id => {
