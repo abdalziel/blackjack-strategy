@@ -395,6 +395,41 @@
 .deck-btn.active { background: #15803d; border-color: #16a34a; }
 .deck-btn[data-decks="drill"].active { background: #7c3aed; border-color: #8b5cf6; }
 
+/* ── Shuffle overlay ───────────────────────────────────────────────── */
+.shuffle-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.78);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+.shuffle-overlay.visible {
+  opacity: 1;
+  pointer-events: all;
+}
+.shuffle-cards-anim {
+  font-size: 4rem;
+  margin-bottom: 14px;
+  animation: cardSway 0.35s ease-in-out infinite alternate;
+}
+@keyframes cardSway {
+  from { transform: rotate(-18deg) scale(1); }
+  to   { transform: rotate(18deg)  scale(1.08); }
+}
+.shuffle-label {
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  opacity: 0.85;
+  color: #fff;
+}
+
 /* Streak score */
 .score-streak { color: #a78bfa; }
 
@@ -468,6 +503,11 @@
   </style>
 </head>
 <body>
+
+<div id="shuffleOverlay" class="shuffle-overlay">
+  <div class="shuffle-cards-anim">🃏</div>
+  <div class="shuffle-label">Reshuffling shoe...</div>
+</div>
 
 <div class="page-layout">
 <div class="main-col">
@@ -618,11 +658,17 @@ function buildShoe() {
   shoeIndex = 0;
 }
 
+let needsReshuffle = false;
+
 function dealCard() {
-  // Reshuffle at 75% penetration
-  if (shoeIndex >= Math.floor(shoe.length * 0.75)) buildShoe();
+  // Flag reshuffle at 75% penetration — actual reshuffle deferred to between hands
+  if (shoeIndex >= Math.floor(shoe.length * 0.75)) needsReshuffle = true;
+  // Safety: if shoe is completely exhausted, rebuild immediately (silent)
+  if (shoeIndex >= shoe.length) { buildShoe(); needsReshuffle = false; }
   return shoe[shoeIndex++];
 }
+
+function randomCard() { return dealCard(); }
 
 function cardValue(rank) {
   if (rank === 'A') return 11;
@@ -687,7 +733,7 @@ function basicStrategy(playerCards, dealerRank) {
   // ── Pairs ─────────────────────────────────────────────────────────────────
   if (pair) {
     const pv = cardValue(playerCards[0].rank);
-    if (pv === 1)  return 'P';
+    if (pv === 11) return 'P'; // Aces: cardValue('A') === 11, always split
     if (pv === 10) return 'S';
     if (pv === 9)  return ['P','P','P','P','P','S','P','P','S','S'][di];
     if (pv === 8)  { if (di === 8) return surrenderEnabled ? 'R' : 'P'; return 'P'; }
@@ -771,7 +817,25 @@ const consecutiveCorrect = {};
 
 const ALL_BTN_IDS = ['btnHit','btnStand','btnDouble','btnSplit','btnSurrender'];
 
-function deal() {
+function showShuffleAnimation() {
+  return new Promise(resolve => {
+    const el = document.getElementById('shuffleOverlay');
+    el.classList.add('visible');
+    setTimeout(() => {
+      el.classList.remove('visible');
+      setTimeout(resolve, 300); // wait for fade-out transition
+    }, 1800);
+  });
+}
+
+async function deal() {
+  // If shoe hit 75% last hand, reshuffle now between hands
+  if (needsReshuffle) {
+    await showShuffleAnimation();
+    buildShoe();
+    needsReshuffle = false;
+  }
+
   // Reset split mode
   inSplitMode = false;
   splitHands = [];
