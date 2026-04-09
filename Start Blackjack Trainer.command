@@ -25,8 +25,8 @@ echo " Press Ctrl+C to stop the server."
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
-# Open browser after a short delay so the server is ready
-(sleep 1 && open "http://localhost:$PORT/blackjack-trainer.html") &
+# Open Safari after a short delay so the server is ready
+(sleep 1 && open -a Safari "http://localhost:$PORT/blackjack-trainer.html") &
 
 cd "$SCRIPT_DIR"
 python3 -m http.server $PORT
