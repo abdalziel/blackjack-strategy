@@ -29,4 +29,4 @@ echo ""
 (sleep 1 && open "http://localhost:$PORT/blackjack-trainer.html") &
 
 cd "$SCRIPT_DIR"
-python3 -m http.server $PORT
+npx serve -l $PORT --no-clipboard
