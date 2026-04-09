@@ -897,12 +897,20 @@ async function deal() {
 }
 
 // ─── Drill / weighted dealing ─────────────────────────────────────────────────
+let lastDrilledKey = null;
+
 function pickDrillHand() {
-  const keys = Object.keys(wrongCounts).filter(k => (consecutiveCorrect[k] || 0) < 5);
-  if (!keys.length || Math.random() > 0.65) return null;
+  // Exclude hands not yet graduated AND the one just drilled (no back-to-back repeats)
+  const keys = Object.keys(wrongCounts).filter(k =>
+    (consecutiveCorrect[k] || 0) < 5 && k !== lastDrilledKey);
+  if (!keys.length || Math.random() > 0.30) return null;
   const total = keys.reduce((s, k) => s + wrongCounts[k], 0);
   let r = Math.random() * total;
-  for (const k of keys) { r -= wrongCounts[k]; if (r <= 0) return k; }
+  for (const k of keys) {
+    r -= wrongCounts[k];
+    if (r <= 0) { lastDrilledKey = k; return k; }
+  }
+  lastDrilledKey = keys[keys.length - 1];
   return keys[keys.length - 1];
 }
 
