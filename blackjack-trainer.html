@@ -458,6 +458,11 @@
 @media (max-width: 480px) {
   .split-hands-row { overflow-x: auto; padding-bottom: 4px; }
   .split-hand-col { min-width: 80px; }
+  .scoreboard {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
 }
   </style>
 </head>
@@ -685,8 +690,8 @@ function basicStrategy(playerCards, dealerRank) {
   }
 
   // ── Hard Totals ────────────────────────────────────────────────────────────
-  // Single-deck: Hard 8 doubles vs 5–6
-  if (sd && total === 8 && (di === 3 || di === 4)) return 'D';
+  // Hard 8 doubles vs 5–6
+  if (total === 8 && (di === 3 || di === 4)) return 'D';
 
   if (surrenderEnabled && total >= 14 && total <= 16) {
     if (total === 16 && (di === 7 || di === 8 || di === 9)) return 'R';
@@ -694,8 +699,8 @@ function basicStrategy(playerCards, dealerRank) {
     if (total === 14 && di === 8)                           return 'R';
   }
 
-  // Hard doubles — H17 adds Double 11 vs A
-  if (total === 11) return (di <= 8 || h17) ? 'D' : 'H';
+  // Hard 11 always doubles
+  if (total === 11) return 'D';
   if (total === 10) return di <= 7 ? 'D' : 'H';
   // 1–2 deck: Hard 9 doubles vs 2–6; 4+ deck: vs 3–6
   if (total === 9)  return (fd ? di <= 4 : (di >= 1 && di <= 4)) ? 'D' : 'H';
