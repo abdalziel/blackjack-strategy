@@ -595,8 +595,31 @@ const RANKS = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
 const SUITS = ['♠','♥','♦','♣'];
 const RED_SUITS = new Set(['♥','♦']);
 
-function randomCard() {
-  return { rank: RANKS[Math.floor(Math.random() * RANKS.length)], suit: SUITS[Math.floor(Math.random() * 4)] };
+// ─── Shoe ────────────────────────────────────────────────────────────────────
+let shoe = [];
+let shoeIndex = 0;
+
+function buildShoe() {
+  shoe = [];
+  for (let d = 0; d < deckCount; d++) {
+    for (const suit of SUITS) {
+      for (const rank of RANKS) {
+        shoe.push({ rank, suit });
+      }
+    }
+  }
+  // Fisher-Yates shuffle
+  for (let i = shoe.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shoe[i], shoe[j]] = [shoe[j], shoe[i]];
+  }
+  shoeIndex = 0;
+}
+
+function dealCard() {
+  // Reshuffle at 75% penetration
+  if (shoeIndex >= Math.floor(shoe.length * 0.75)) buildShoe();
+  return shoe[shoeIndex++];
 }
 
 function cardValue(rank) {
@@ -766,12 +789,12 @@ function deal() {
       playerCards = gen.playerCards;
       dealerCards = gen.dealerCards;
     } else {
-      do { playerCards = [randomCard(), randomCard()]; } while (handTotal(playerCards) === 21);
-      dealerCards = [randomCard(), randomCard()];
+      do { playerCards = [dealCard(), dealCard()]; } while (handTotal(playerCards) === 21);
+      dealerCards = [dealCard(), dealCard()];
     }
   } else {
-    do { playerCards = [randomCard(), randomCard()]; } while (handTotal(playerCards) === 21);
-    dealerCards = [randomCard(), randomCard()];
+    do { playerCards = [dealCard(), dealCard()]; } while (handTotal(playerCards) === 21);
+    dealerCards = [dealCard(), dealCard()];
   }
 
   ALL_BTN_IDS.forEach(id => {
@@ -819,7 +842,7 @@ function generateHandForKey(key) {
     const [handDesc, dealerStr] = key.split('|');
     const dealerVal  = dealerStr === 'A' ? 1 : parseInt(dealerStr);
     const dealerCard = forceCard(dealerVal);
-    const dealerHole = randomCard();
+    const dealerHole = dealCard();
     let pc;
 
     if (handDesc === 'Pair of Aces') {
@@ -1234,6 +1257,7 @@ function setDeckCount(n) {
   deckCount = n;
   document.querySelectorAll('.deck-btn').forEach(btn =>
     btn.classList.toggle('active', parseInt(btn.dataset.decks) === n));
+  buildShoe();
   saveState(); deal();
 }
 
@@ -1370,6 +1394,7 @@ function renderChart() {
 
 // ─── Init ────────────────────────────────────────────────────────────────────
 loadState();
+buildShoe();
 deal();
 </script>
 </body>
