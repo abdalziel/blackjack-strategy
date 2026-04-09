@@ -707,7 +707,7 @@ function basicStrategy(playerCards, dealerRank) {
 
   if (total >= 17)                return 'S';
   if (total >= 13 && total <= 16) return di <= 4 ? 'S' : 'H';
-  if (total === 12)               return (di >= 2 && di <= 4) ? 'S' : 'H';
+  if (total === 12)               return (di >= 1 && di <= 4) ? 'S' : 'H';
   return 'H';
 }
 
