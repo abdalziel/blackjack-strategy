@@ -751,7 +751,7 @@ function basicStrategy(playerCards, dealerRank) {
     if (nonAce) {
       const nv = cardValue(nonAce.rank);
       if (nv >= 8) {
-        if (nv === 8 && di === 2) return 'D'; // A8 doubles vs dealer 4
+        if (nv === 8 && (di === 3 || di === 4)) return 'D'; // A8 doubles vs dealer 5,6
         return 'S';
       }
       if (nv === 7) {
