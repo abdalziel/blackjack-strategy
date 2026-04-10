@@ -755,9 +755,10 @@ function basicStrategy(playerCards, dealerRank) {
         return 'S';
       }
       if (nv === 7) {
-        // A7 (soft 18): Double vs 2–6; Stand vs 7,8; Hit vs 9,10,A
+        // A7 (soft 18): Double vs 2–6; Stand vs 7,8; Stand vs A (S17) or Hit vs A (H17); Hit vs 9,10
         if (di <= 4) return 'D';
         if (di === 5 || di === 6) return 'S';
+        if (di === 9) return h17 ? 'H' : 'S';
         return 'H';
       }
       if (nv === 6) {
