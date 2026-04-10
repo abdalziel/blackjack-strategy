@@ -752,9 +752,14 @@ function basicStrategy(playerCards, dealerRank) {
       const nv = cardValue(nonAce.rank);
       if (nv >= 8) return 'S';
       if (nv === 7) {
-        if (di >= 2 && di <= 4) return 'D';
-        if (di === 0 || di === 1 || di === 5 || di === 6) return 'S';
+        // A7 (soft 18): Double vs 2,3,5,6; Stand vs 4,7,8; Hit vs 9,10,A
+        if (di === 0 || di === 1 || di === 3 || di === 4) return 'D';
+        if (di === 2 || di === 5 || di === 6) return 'S';
         return 'H';
+      }
+      if (nv === 6) {
+        // A6 (soft 17): Double vs 2–6; Hit otherwise
+        return di <= 4 ? 'D' : 'H';
       }
       if (di >= 2 && di <= 4) return 'D';
       return 'H';
@@ -1015,10 +1020,10 @@ function generateDoubleDrillHand() {
     () => { const pc = buildHardHand(9);  return pc ? { playerCards: pc, dealerCards: makeDealerCards(['2','7','8','9','10','A'][Math.floor(Math.random()*6)]) } : null; },
     // Hard 8 — only vs 5–6
     () => { const pc = buildHardHand(8);  return pc ? { playerCards: pc, dealerCards: makeDealerCards(randomDealerRank()) } : null; },
-    // Soft 18 (A+7) — stand vs 2/7/8, double vs 3–6, hit vs 9/10/A
+    // Soft 18 (A+7) — double vs 2,3,5,6; stand vs 4,7,8; hit vs 9/10/A
     () => ({ playerCards: [{rank:'A',suit:SUITS[0]}, forceCard(7)], dealerCards: makeDealerCards(randomDealerRank()) }),
     () => ({ playerCards: [{rank:'A',suit:SUITS[0]}, forceCard(7)], dealerCards: makeDealerCards(['9','10','A'][Math.floor(Math.random()*3)]) }),
-    // Soft 17 (A+6) — double vs 3–6, else hit
+    // Soft 17 (A+6) — double vs 2–6, else hit
     () => ({ playerCards: [{rank:'A',suit:SUITS[0]}, forceCard(6)], dealerCards: makeDealerCards(randomDealerRank()) }),
     // Soft 16 (A+5) — double vs 4–6
     () => ({ playerCards: [{rank:'A',suit:SUITS[0]}, forceCard(5)], dealerCards: makeDealerCards(randomDealerRank()) }),
