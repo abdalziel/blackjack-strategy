@@ -735,14 +735,14 @@ function basicStrategy(playerCards, dealerRank) {
     const pv = cardValue(playerCards[0].rank);
     if (pv === 11) return 'P'; // Aces: cardValue('A') === 11, always split
     if (pv === 10) return 'S';
-    if (pv === 9)  return ['P','P','P','P','P','S','P','P','S','S'][di];
+    if (pv === 9)  { if (di === 9) return das ? 'P' : 'S'; return ['P','P','P','P','P','S','P','P','S'][di]; }
     if (pv === 8)  { if (di === 8) return surrenderEnabled ? 'R' : 'P'; return 'P'; }
-    if (pv === 7)  return (sd ? di <= 6 : di <= 5) ? 'P' : 'H';  // SD: split vs 2–8
-    if (pv === 6)  { if (das) return di <= 5 ? 'P' : 'H'; return (di >= 1 && di <= 4) ? 'P' : 'H'; }
+    if (pv === 7)  return (di <= 5 || (di === 6 && (sd || das))) ? 'P' : 'H';
+    if (pv === 6)  { if (das) return di <= 4 ? 'P' : 'H'; return (di >= 1 && di <= 4) ? 'P' : 'H'; }
     if (pv === 5)  return di <= 7 ? 'D' : 'H';
-    if (pv === 4)  return 'H';
+    if (pv === 4)  { if (das && di >= 2 && di <= 4) return 'P'; return 'H'; }
     if (pv === 3)  { if (das) return di <= 5 ? 'P' : 'H'; return (di >= 2 && di <= 5) ? 'P' : 'H'; }
-    if (pv === 2)  { if (das) return di <= 5 ? 'P' : 'H'; return (di >= 2 && di <= 5) ? 'P' : 'H'; }
+    if (pv === 2)  { if (das) return di <= 5 ? 'P' : 'H'; return (di >= 1 && di <= 5) ? 'P' : 'H'; }
   }
 
   // ── Soft Totals ────────────────────────────────────────────────────────────
