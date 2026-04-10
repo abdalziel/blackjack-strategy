@@ -735,7 +735,7 @@ function basicStrategy(playerCards, dealerRank) {
     const pv = cardValue(playerCards[0].rank);
     if (pv === 11) return 'P'; // Aces: cardValue('A') === 11, always split
     if (pv === 10) return 'S';
-    if (pv === 9)  { if (di === 9) return das ? 'P' : 'S'; return ['P','P','P','P','P','S','P','P','S'][di]; }
+    if (pv === 9)  { if (di === 9) return (h17 && das) ? 'P' : 'S'; return ['P','P','P','P','P','S','P','P','S'][di]; }
     if (pv === 8)  { if (di === 8) return surrenderEnabled ? 'R' : 'P'; return 'P'; }
     if (pv === 7)  return (di <= 5 || (di === 6 && (sd || das))) ? 'P' : 'H';
     if (pv === 6)  { if (das) return di <= 4 ? 'P' : 'H'; return (di >= 1 && di <= 4) ? 'P' : 'H'; }
@@ -1431,19 +1431,19 @@ function syncToggleUI(toggleId, badgeId, state) {
 function onDasChange() {
   dasEnabled = document.getElementById('dasToggle').checked;
   syncToggleUI('dasToggle', 'dasBadge', dasEnabled);
-  saveState(); deal();
+  saveState(); deal(); refreshChart();
 }
 
 function onSurrenderChange() {
   surrenderEnabled = document.getElementById('surrenderToggle').checked;
   syncToggleUI('surrenderToggle', 'surrenderBadge', surrenderEnabled);
-  saveState(); deal();
+  saveState(); deal(); refreshChart();
 }
 
 function onH17Change() {
   h17Enabled = document.getElementById('h17Toggle').checked;
   syncToggleUI('h17Toggle', 'h17Badge', h17Enabled);
-  saveState(); deal();
+  saveState(); deal(); refreshChart();
 }
 
 function onAutoAdvanceChange() {
@@ -1458,7 +1458,7 @@ function setDeckCount(n) {
   document.querySelectorAll('.deck-btn').forEach(btn =>
     btn.classList.toggle('active', parseInt(btn.dataset.decks) === n));
   buildShoe();
-  saveState(); deal();
+  saveState(); deal(); refreshChart();
 }
 
 // ─── Reset ───────────────────────────────────────────────────────────────────
@@ -1493,7 +1493,12 @@ function toggleChart(btn) {
   const body = document.getElementById('chartBody');
   const open = body.classList.toggle('open');
   btn.textContent = (open ? '▼' : '▶') + ' Strategy Reference Chart';
-  if (open && !body.innerHTML.trim()) renderChart();
+  if (open) renderChart();
+}
+
+function refreshChart() {
+  const body = document.getElementById('chartBody');
+  if (body.classList.contains('open')) renderChart();
 }
 
 function renderChart() {
