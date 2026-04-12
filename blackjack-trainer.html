@@ -611,6 +611,30 @@
 .tray-btn.deal-btn { background: #15803d; border-color: #16a34a; }
 .tray-btn.deal-btn:hover:not(:disabled) { background: #166534; }
 
+/* Play-mode rule selectors */
+.play-rules {
+  width: 100%; max-width: 680px;
+  background: rgba(0,0,0,0.2);
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.play-rules-row {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  align-items: center; justify-content: center;
+}
+.play-rule-toggle {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(0,0,0,0.2); border-radius: 8px;
+  padding: 6px 12px; cursor: pointer; user-select: none;
+  font-size: 0.82rem;
+}
+.play-rule-toggle:hover { background: rgba(0,0,0,0.32); }
+.play-rule-toggle input[type="checkbox"] {
+  width: 14px; height: 14px; cursor: pointer; accent-color: #fbbf24;
+}
+
 .winnings-panel {
   flex: 1; min-width: 220px;
   background: rgba(0,0,0,0.25); border-radius: 16px;
@@ -869,6 +893,35 @@
 <div id="tab-play" class="tab-panel">
 <div class="play-layout">
 <div class="play-main">
+
+  <!-- Play-mode rule selectors (independent of strategy trainer) -->
+  <div class="play-rules">
+    <div class="play-rules-row">
+      <label class="play-rule-toggle">
+        <input type="checkbox" id="playDasToggle" checked onchange="onPlayRuleChange()" />
+        <span>DAS</span>
+        <span class="das-badge on" id="playDasBadge">ON</span>
+      </label>
+      <label class="play-rule-toggle">
+        <input type="checkbox" id="playSurrenderToggle" checked onchange="onPlayRuleChange()" />
+        <span>Late Surrender</span>
+        <span class="das-badge on" id="playSurrenderBadge">ON</span>
+      </label>
+      <label class="play-rule-toggle">
+        <input type="checkbox" id="playH17Toggle" onchange="onPlayRuleChange()" />
+        <span>Dealer Hits Soft 17</span>
+        <span class="das-badge off" id="playH17Badge">OFF</span>
+      </label>
+    </div>
+    <div class="play-rules-row">
+      <span style="opacity:0.6;font-size:0.82rem">Decks:</span>
+      <button class="deck-btn" data-play-decks="1"  onclick="setPlayDeckCount(1)">1</button>
+      <button class="deck-btn" data-play-decks="2"  onclick="setPlayDeckCount(2)">2</button>
+      <button class="deck-btn" data-play-decks="4"  onclick="setPlayDeckCount(4)">4</button>
+      <button class="deck-btn active" data-play-decks="6" onclick="setPlayDeckCount(6)">6</button>
+      <button class="deck-btn" data-play-decks="8"  onclick="setPlayDeckCount(8)">8</button>
+    </div>
+  </div>
 
   <div class="bankroll-bar">
     <div class="bankroll-item">
@@ -1996,6 +2049,40 @@ let playSplitIndex  = 0;
 let playInSplit     = false;
 let playFirstAction = true;
 
+// Play-mode rule state (independent of strategy trainer)
+let playDasEnabled       = true;
+let playSurrenderEnabled = true;
+let playH17Enabled       = false;
+let playDeckCount        = 6;
+
+// Play-mode dedicated shoe
+let playShoe       = [];
+let playShoeIndex  = 0;
+let playNeedsReshuffle = false;
+
+function buildPlayShoe() {
+  playShoe = [];
+  for (let d = 0; d < playDeckCount; d++) {
+    for (const suit of SUITS) {
+      for (const rank of RANKS) {
+        playShoe.push({ rank, suit });
+      }
+    }
+  }
+  for (let i = playShoe.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [playShoe[i], playShoe[j]] = [playShoe[j], playShoe[i]];
+  }
+  playShoeIndex = 0;
+  playNeedsReshuffle = false;
+}
+
+function dealPlayCard() {
+  if (playShoeIndex >= Math.floor(playShoe.length * 0.75)) playNeedsReshuffle = true;
+  if (playShoeIndex >= playShoe.length) { buildPlayShoe(); }
+  return playShoe[playShoeIndex++];
+}
+
 let playStats = {
   handsPlayed: 0, wins: 0, losses: 0, pushes: 0,
   blackjacks: 0, biggestWin: 0, biggestLoss: 0,
@@ -2005,6 +2092,8 @@ let playStats = {
 function initPlay() {
   playInitialized = true;
   loadPlayState();
+  buildPlayShoe();
+  syncPlayRuleUI();
   updatePlayBankrollUI();
   updateWinningsUI();
   updatePlayBetDisplay();
@@ -2066,7 +2155,7 @@ function flipHoleCard() {
 // ─── Deal ─────────────────────────────────────────────────────────────────────
 function startPlayHand() {
   if (playPhase !== 'bet' || playBet === 0) return;
-  if (needsReshuffle) { buildShoe(); needsReshuffle = false; }
+  if (playNeedsReshuffle) { buildPlayShoe(); }
 
   playLastBet      = playBet;
   playBankroll    -= playBet;
@@ -2076,8 +2165,8 @@ function startPlayHand() {
   playSplitHands   = [];
   playSplitIndex   = 0;
 
-  playPlayerCards = [dealCard(), dealCard()];
-  playDealerCards = [dealCard(), dealCard()];
+  playPlayerCards = [dealPlayCard(), dealPlayCard()];
+  playDealerCards = [dealPlayCard(), dealPlayCard()];
 
   setPlayChipsEnabled(false);
 
@@ -2125,7 +2214,7 @@ function playAction(action) {
 
   if (action === 'hit') {
     playFirstAction = false;
-    const newCard = dealCard();
+    const newCard = dealPlayCard();
     playPlayerCards.push(newCard);
     appendAnimatedCard('playPlayerHand', newCard);
     updatePlayHandInfo();
@@ -2149,7 +2238,7 @@ function playAction(action) {
     playBet      *= 2;
     updatePlayBankrollUI();
     playFirstAction = false;
-    const doubleCard = dealCard();
+    const doubleCard = dealPlayCard();
     playPlayerCards.push(doubleCard);
     appendAnimatedCard('playPlayerHand', doubleCard);
     updatePlayHandInfo();
@@ -2163,8 +2252,8 @@ function playAction(action) {
     updatePlayBankrollUI();
     playInSplit    = true;
     playSplitHands = [
-      [playPlayerCards[0], dealCard()],
-      [playPlayerCards[1], dealCard()]
+      [playPlayerCards[0], dealPlayCard()],
+      [playPlayerCards[1], dealPlayCard()]
     ];
     playSplitIndex  = 0;
     playPlayerCards = playSplitHands[0];
@@ -2229,9 +2318,9 @@ function dealerPlayOut(cards, callback) {
   function hitStep() {
     const total    = handTotal(cards);
     const soft     = isSoft(cards);
-    const shouldHit = total < 17 || (h17Enabled && soft && total === 17);
+    const shouldHit = total < 17 || (playH17Enabled && soft && total === 17);
     if (shouldHit) {
-      const dealerHit = dealCard();
+      const dealerHit = dealPlayCard();
       cards.push(dealerHit);
       appendAnimatedCard('playDealerHand', dealerHit);
       updatePlayDealerTotal(true);
@@ -2387,7 +2476,7 @@ function showPlayActions() {
   const canDouble = playFirstAction && playBankroll >= playBet;
   const canSplit  = playFirstAction && isPair(playPlayerCards) && playBankroll >= playLastBet
                     && (!playInSplit || playSplitHands.length < 4);
-  const canSurr   = surrenderEnabled && playFirstAction && !playInSplit;
+  const canSurr   = playSurrenderEnabled && playFirstAction && !playInSplit;
   document.getElementById('playBtnDouble').disabled = !canDouble;
   document.getElementById('playBtnSplit').disabled  = !canSplit;
   document.getElementById('playSurrenderArea').style.display = canSurr ? 'block' : 'none';
@@ -2433,9 +2522,40 @@ function toggleWinnings() {
   title.textContent  = (open ? '▶' : '▼') + ' Session Stats';
 }
 
+// ─── Play-mode rule controls ─────────────────────────���────────────────────────
+function onPlayRuleChange() {
+  playDasEnabled       = document.getElementById('playDasToggle').checked;
+  playSurrenderEnabled = document.getElementById('playSurrenderToggle').checked;
+  playH17Enabled       = document.getElementById('playH17Toggle').checked;
+  syncPlayRuleUI();
+  savePlayState();
+}
+
+function setPlayDeckCount(n) {
+  playDeckCount = n;
+  document.querySelectorAll('[data-play-decks]').forEach(btn =>
+    btn.classList.toggle('active', parseInt(btn.dataset.playDecks) === n));
+  buildPlayShoe();
+  savePlayState();
+}
+
+function syncPlayRuleUI() {
+  document.getElementById('playDasToggle').checked       = playDasEnabled;
+  document.getElementById('playSurrenderToggle').checked = playSurrenderEnabled;
+  document.getElementById('playH17Toggle').checked       = playH17Enabled;
+  syncToggleUI('playDasToggle',       'playDasBadge',       playDasEnabled);
+  syncToggleUI('playSurrenderToggle', 'playSurrenderBadge', playSurrenderEnabled);
+  syncToggleUI('playH17Toggle',       'playH17Badge',       playH17Enabled);
+  document.querySelectorAll('[data-play-decks]').forEach(btn =>
+    btn.classList.toggle('active', parseInt(btn.dataset.playDecks) === playDeckCount));
+}
+
 function savePlayState() {
   try {
-    localStorage.setItem('bjPlay', JSON.stringify({ playBankroll, playLastBet, playStats }));
+    localStorage.setItem('bjPlay', JSON.stringify({
+      playBankroll, playLastBet, playStats,
+      playDasEnabled, playSurrenderEnabled, playH17Enabled, playDeckCount
+    }));
   } catch(e) {}
 }
 
@@ -2443,8 +2563,12 @@ function loadPlayState() {
   try {
     const s = JSON.parse(localStorage.getItem('bjPlay') || 'null');
     if (!s) return;
-    playBankroll = s.playBankroll || 500;
-    playLastBet  = s.playLastBet  || 0;
+    playBankroll         = s.playBankroll         || 500;
+    playLastBet          = s.playLastBet           || 0;
+    playDasEnabled       = s.playDasEnabled        ?? true;
+    playSurrenderEnabled = s.playSurrenderEnabled  ?? true;
+    playH17Enabled       = s.playH17Enabled        ?? false;
+    playDeckCount        = s.playDeckCount         || 6;
     Object.assign(playStats, s.playStats || {});
     if (!playStats.startBankroll) playStats.startBankroll = 500;
   } catch(e) {}
