@@ -500,6 +500,226 @@
     gap: 10px;
   }
 }
+
+/* ── Tab Navigation ──────────────────────────────────────────────────── */
+.tab-nav {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 24px;
+  background: rgba(0,0,0,0.25);
+  border-radius: 12px;
+  padding: 6px;
+  width: 100%;
+  max-width: 680px;
+}
+.tab-btn {
+  flex: 1;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(255,255,255,0.6);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  letter-spacing: 0.3px;
+}
+.tab-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+.tab-btn.active { background: rgba(255,255,255,0.18); color: #fff; }
+.tab-panel { display: none; width: 100%; }
+#tab-strategy.active { display: contents; }
+#tab-play.active, #tab-count.active { display: flex; flex-direction: column; align-items: center; }
+
+/* ── Play Mode ───────────────────────────────────────────────────────── */
+.play-layout {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  width: 100%;
+  max-width: 1120px;
+}
+.play-main { flex: 0 0 auto; width: 100%; max-width: 680px; display: flex; flex-direction: column; align-items: center; }
+
+.chip-tray {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.chip {
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  border: 3px dashed rgba(255,255,255,0.5);
+  font-size: 0.75rem; font-weight: 800;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: transform 0.1s, box-shadow 0.15s;
+  user-select: none;
+  color: #fff;
+}
+.chip:hover:not(:disabled) { transform: translateY(-3px); box-shadow: 0 6px 14px rgba(0,0,0,0.4); }
+.chip:active:not(:disabled) { transform: translateY(0); }
+.chip:disabled { opacity: 0.35; cursor: not-allowed; }
+.chip-5   { background: #dc2626; }
+.chip-10  { background: #2563eb; }
+.chip-25  { background: #15803d; }
+.chip-50  { background: #7c3aed; }
+.chip-100 { background: #92400e; }
+
+.bet-display { text-align: center; margin-bottom: 14px; }
+.bet-amount  { font-size: 2rem; font-weight: 800; color: #fbbf24; }
+.bet-label   { font-size: 0.72rem; opacity: 0.6; text-transform: uppercase; letter-spacing: 1px; }
+
+.play-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+.play-action-full { margin-bottom: 10px; }
+
+.bankroll-bar {
+  display: flex; gap: 20px; justify-content: center;
+  margin-bottom: 16px; flex-wrap: wrap;
+}
+.bankroll-item { background: rgba(0,0,0,0.25); border-radius: 10px; padding: 8px 20px; text-align: center; }
+.bankroll-label { font-size: 0.7rem; opacity: 0.7; text-transform: uppercase; letter-spacing: 1px; }
+.bankroll-value { font-size: 1.4rem; font-weight: 700; }
+.bankroll-pos { color: #6ee87a; }
+.bankroll-neg { color: #f87171; }
+.bankroll-neu { color: #fbbf24; }
+
+.play-result {
+  text-align: center; font-size: 1.5rem; font-weight: 800;
+  letter-spacing: 1px; padding: 10px; border-radius: 10px;
+  margin-bottom: 12px; display: none;
+}
+.play-result.win  { background: rgba(22,163,74,0.3);  border: 1px solid #16a34a; color: #86efac; }
+.play-result.lose { background: rgba(185,28,28,0.3);  border: 1px solid #b91c1c; color: #fca5a5; }
+.play-result.push { background: rgba(251,191,36,0.2); border: 1px solid #d97706; color: #fde68a; }
+.play-result.bj   { background: rgba(168,85,247,0.3); border: 1px solid #a855f7; color: #e9d5ff; }
+
+.dealer-total { font-size: 0.8rem; opacity: 0.7; margin-bottom: 6px; min-height: 18px; }
+
+.tray-controls { display: flex; gap: 8px; justify-content: center; margin-bottom: 12px; }
+.tray-btn {
+  padding: 7px 16px;
+  border: 1px solid rgba(255,255,255,0.2); border-radius: 8px;
+  background: rgba(0,0,0,0.25); color: #fff;
+  font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: background 0.2s;
+}
+.tray-btn:hover:not(:disabled) { background: rgba(0,0,0,0.4); }
+.tray-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.tray-btn.deal-btn { background: #15803d; border-color: #16a34a; }
+.tray-btn.deal-btn:hover:not(:disabled) { background: #166534; }
+
+.winnings-panel {
+  flex: 1; min-width: 220px;
+  background: rgba(0,0,0,0.25); border-radius: 16px;
+  padding: 16px 14px; position: sticky; top: 24px;
+}
+.winnings-title {
+  font-size: 0.88rem; font-weight: 700; letter-spacing: 0.5px;
+  text-align: center; margin-bottom: 10px; padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.15);
+  cursor: pointer; user-select: none;
+}
+.winnings-body {}
+.winnings-row {
+  display: flex; justify-content: space-between;
+  padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 0.8rem;
+}
+.winnings-row:last-child { border-bottom: none; }
+.winnings-row span:first-child { opacity: 0.65; }
+.winnings-row span:last-child { font-weight: 700; }
+.w-pos { color: #6ee87a; }
+.w-neg { color: #f87171; }
+.w-neu { color: #fbbf24; }
+
+@media (max-width: 860px) {
+  .play-layout { flex-direction: column; align-items: center; }
+  .winnings-panel { max-width: 680px; width: 100%; position: static; }
+}
+
+/* ── Card Counting Tab ───────────────────────────────────────────────── */
+.count-main {
+  width: 100%; max-width: 680px;
+  display: flex; flex-direction: column; align-items: center;
+}
+.count-settings {
+  display: flex; gap: 12px; align-items: center;
+  flex-wrap: wrap; justify-content: center;
+  margin-bottom: 20px;
+  background: rgba(0,0,0,0.2); border-radius: 12px;
+  padding: 14px 20px; width: 100%; max-width: 680px;
+}
+.count-settings label { font-size: 0.85rem; opacity: 0.75; }
+.count-settings select {
+  background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 8px; color: #fff; padding: 6px 12px; font-size: 0.9rem; cursor: pointer;
+}
+.count-deal-area {
+  display: flex; flex-wrap: wrap; gap: 10px;
+  min-height: 120px; align-items: center; justify-content: center;
+  margin-bottom: 20px; width: 100%;
+}
+@keyframes cardDeal {
+  from { opacity: 0; transform: translateY(-30px) rotate(-5deg); }
+  to   { opacity: 1; transform: translateY(0) rotate(0deg); }
+}
+.card-dealing { animation: cardDeal 0.35s ease-out forwards; }
+
+.count-status {
+  text-align: center; font-size: 1rem; opacity: 0.75;
+  margin-bottom: 16px; min-height: 24px;
+}
+.count-input-area {
+  display: flex; gap: 10px; align-items: center;
+  justify-content: center; margin-bottom: 16px; flex-wrap: wrap;
+}
+.count-input {
+  width: 90px; padding: 10px;
+  background: rgba(0,0,0,0.3); border: 2px solid rgba(255,255,255,0.25);
+  border-radius: 10px; color: #fff;
+  font-size: 1.4rem; font-weight: 700; text-align: center;
+}
+.count-input:focus { outline: none; border-color: #fbbf24; }
+.btn-count-submit {
+  padding: 10px 24px; background: #2563eb; color: #fff;
+  border: none; border-radius: 10px;
+  font-size: 1rem; font-weight: 700; cursor: pointer; transition: background 0.2s;
+}
+.btn-count-submit:hover:not(:disabled) { background: #1d4ed8; }
+.btn-count-submit:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.count-feedback {
+  min-height: 56px; border-radius: 10px; padding: 12px 16px;
+  font-size: 0.95rem; line-height: 1.5;
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 16px;
+  background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.08);
+  width: 100%;
+}
+.count-feedback.correct { background: rgba(22,163,74,0.3); border-color: #16a34a; }
+.count-feedback.wrong   { background: rgba(185,28,28,0.3); border-color: #b91c1c; }
+
+.count-scoreboard {
+  display: flex; gap: 16px; flex-wrap: wrap;
+  justify-content: center; margin-bottom: 20px;
+}
+.count-score-item {
+  background: rgba(0,0,0,0.25); border-radius: 10px;
+  padding: 8px 18px; text-align: center;
+}
+.count-score-label { font-size: 0.7rem; opacity: 0.65; text-transform: uppercase; letter-spacing: 1px; }
+.count-score-value { font-size: 1.3rem; font-weight: 700; }
+
+.hilo-ref {
+  display: flex; gap: 16px; flex-wrap: wrap;
+  justify-content: center; margin-bottom: 16px; font-size: 0.8rem;
+}
+.hilo-ref span { background: rgba(0,0,0,0.2); border-radius: 8px; padding: 5px 12px; }
+.hilo-plus  { color: #6ee87a; }
+.hilo-zero  { color: #fbbf24; }
+.hilo-minus { color: #f87171; }
   </style>
 </head>
 <body>
@@ -509,11 +729,18 @@
   <div class="shuffle-label">Reshuffling shoe...</div>
 </div>
 
-<div class="page-layout">
-<div class="main-col">
-
 <h1>Blackjack Strategy Trainer</h1>
 <p class="subtitle">T-H Basic Strategy &mdash; T. Hopper &mdash; Late Surrender, 6 decks</p>
+
+<div class="tab-nav">
+  <button class="tab-btn active" id="tabBtnStrategy" onclick="switchTab('strategy')">Strategy Trainer</button>
+  <button class="tab-btn" id="tabBtnPlay" onclick="switchTab('play')">Play Mode</button>
+  <button class="tab-btn" id="tabBtnCount" onclick="switchTab('count')">Card Counting</button>
+</div>
+
+<div id="tab-strategy" class="tab-panel active">
+<div class="page-layout">
+<div class="main-col">
 
 <div class="das-toggle">
   <label>
@@ -630,6 +857,147 @@
 </div>
 
 <div class="grad-toast" id="gradToast"></div>
+</div><!-- end #tab-strategy -->
+
+<!-- ═══ PLAY MODE TAB ═══════════════════════════════════════════════════════ -->
+<div id="tab-play" class="tab-panel">
+<div class="play-layout">
+<div class="play-main">
+
+  <div class="bankroll-bar">
+    <div class="bankroll-item">
+      <div class="bankroll-label">Bankroll</div>
+      <div class="bankroll-value bankroll-neu" id="playBankroll">$500</div>
+    </div>
+    <div class="bankroll-item">
+      <div class="bankroll-label">Net P/L</div>
+      <div class="bankroll-value bankroll-neu" id="playNetPL">$0</div>
+    </div>
+  </div>
+
+  <div class="bet-display">
+    <div class="bet-label">Current Bet</div>
+    <div class="bet-amount" id="playBetDisplay">$0</div>
+  </div>
+
+  <div class="chip-tray">
+    <button class="chip chip-5"   onclick="addChip(5)"   id="chip5">$5</button>
+    <button class="chip chip-10"  onclick="addChip(10)"  id="chip10">$10</button>
+    <button class="chip chip-25"  onclick="addChip(25)"  id="chip25">$25</button>
+    <button class="chip chip-50"  onclick="addChip(50)"  id="chip50">$50</button>
+    <button class="chip chip-100" onclick="addChip(100)" id="chip100">$100</button>
+  </div>
+
+  <div class="tray-controls">
+    <button class="tray-btn" id="btnClearBet"  onclick="clearBet()">Clear</button>
+    <button class="tray-btn" id="btnDoubleBet" onclick="doubleBet()">2× Last Bet</button>
+    <button class="tray-btn deal-btn" id="btnDealPlay" onclick="startPlayHand()">Deal</button>
+  </div>
+
+  <div class="table-area">
+    <div class="hand-label">Dealer</div>
+    <div class="dealer-total" id="playDealerTotal"></div>
+    <div class="hand" id="playDealerHand"></div>
+
+    <hr class="divider" />
+
+    <div class="hand-label">Your Hand</div>
+    <div class="hand" id="playPlayerHand"></div>
+    <div class="hand-info" id="playHandInfo">&nbsp;</div>
+
+    <div class="play-result" id="playResult"></div>
+
+    <div class="play-actions" id="playActionBtns" style="display:none">
+      <button class="btn btn-hit"    onclick="playAction('hit')">Hit</button>
+      <button class="btn btn-stand"  onclick="playAction('stand')">Stand</button>
+      <button class="btn btn-double" id="playBtnDouble" onclick="playAction('double')">Double Down</button>
+      <button class="btn btn-split"  id="playBtnSplit"  onclick="playAction('split')">Split</button>
+    </div>
+    <div class="play-action-full" id="playSurrenderArea" style="display:none">
+      <button class="btn btn-surrender" onclick="playAction('surrender')">Surrender</button>
+    </div>
+
+    <button class="btn-next" id="btnPlayNext" style="display:none" onclick="playNextHand()">Next Hand &rarr;</button>
+  </div>
+
+</div><!-- end .play-main -->
+
+<div class="winnings-panel">
+  <div class="winnings-title" onclick="toggleWinnings()">Session Stats ▼</div>
+  <div class="winnings-body" id="winningsBody">
+    <div class="winnings-row"><span>Hands Played</span><span id="wHandsPlayed">0</span></div>
+    <div class="winnings-row"><span>Wins</span><span id="wWins" class="w-pos">0</span></div>
+    <div class="winnings-row"><span>Losses</span><span id="wLosses" class="w-neg">0</span></div>
+    <div class="winnings-row"><span>Pushes</span><span id="wPushes" class="w-neu">0</span></div>
+    <div class="winnings-row"><span>Blackjacks</span><span id="wBJs" class="w-pos">0</span></div>
+    <div class="winnings-row"><span>Biggest Win</span><span id="wBigWin" class="w-pos">$0</span></div>
+    <div class="winnings-row"><span>Biggest Loss</span><span id="wBigLoss" class="w-neg">$0</span></div>
+    <button class="btn-reset" onclick="resetPlaySession()" style="margin-top:12px">Reset Session</button>
+  </div>
+</div>
+
+</div><!-- end .play-layout -->
+</div><!-- end #tab-play -->
+
+<!-- ═══ CARD COUNTING TAB ════════════════════════════════════════════════════ -->
+<div id="tab-count" class="tab-panel">
+<div class="count-main">
+
+  <div class="count-settings">
+    <label for="countCardCount">Cards to show:</label>
+    <select id="countCardCount" onchange="onCountSettingChange()">
+      <option value="5">5</option>
+      <option value="10" selected>10</option>
+      <option value="15">15</option>
+      <option value="20">20</option>
+      <option value="26">Half shoe</option>
+      <option value="52">Full deck (1 deck)</option>
+    </select>
+    <label for="countDeckSel">Decks:</label>
+    <select id="countDeckSel" onchange="onCountSettingChange()">
+      <option value="1">1</option>
+      <option value="2">2</option>
+      <option value="6" selected>6</option>
+      <option value="8">8</option>
+    </select>
+  </div>
+
+  <div class="hilo-ref">
+    <span class="hilo-plus">2–6: <strong>+1</strong></span>
+    <span class="hilo-zero">7–9: <strong>0</strong></span>
+    <span class="hilo-minus">10 / J / Q / K / A: <strong>&minus;1</strong></span>
+  </div>
+
+  <div class="count-scoreboard">
+    <div class="count-score-item">
+      <div class="count-score-label">Correct</div>
+      <div class="count-score-value" style="color:#6ee87a" id="countCorrect">0</div>
+    </div>
+    <div class="count-score-item">
+      <div class="count-score-label">Attempts</div>
+      <div class="count-score-value" style="color:#fbbf24" id="countAttempts">0</div>
+    </div>
+    <div class="count-score-item">
+      <div class="count-score-label">Streak</div>
+      <div class="count-score-value" style="color:#a78bfa" id="countStreak">0</div>
+    </div>
+  </div>
+
+  <div class="table-area" style="width:100%">
+    <div class="count-status" id="countStatus">Press Start to begin a round</div>
+    <div class="count-deal-area" id="countDealArea"></div>
+    <div class="count-input-area" id="countInputArea" style="display:none">
+      <input type="number" class="count-input" id="countGuess" placeholder="0"
+        onkeydown="if(event.key==='Enter') submitCount()" />
+      <button class="btn-count-submit" onclick="submitCount()" id="btnSubmitCount">Submit</button>
+    </div>
+    <div class="count-feedback" id="countFeedback" style="display:none"></div>
+    <button class="btn-next" id="btnCountStart" onclick="startCountRound()">Start Round</button>
+    <button class="btn-next" id="btnCountNext"  onclick="resetCountRound()" style="display:none">Next Round &rarr;</button>
+  </div>
+
+</div><!-- end .count-main -->
+</div><!-- end #tab-count -->
 
 <script>
 // ─── Card Data ──────────────────────────────────────────────────────────────
@@ -1596,6 +1964,605 @@ function renderChart() {
   body.innerHTML = '';
   body.appendChild(legend);
   body.appendChild(table);
+}
+
+// ─── Tab Switching ───────────────────────────────────────────────────────────
+function switchTab(name) {
+  ['strategy','play','count'].forEach(t => {
+    document.getElementById('tab-' + t).classList.toggle('active', t === name);
+    const id = 'tabBtn' + t.charAt(0).toUpperCase() + t.slice(1);
+    document.getElementById(id).classList.toggle('active', t === name);
+  });
+  if (name === 'play' && !playInitialized) initPlay();
+  if (name === 'count' && !countShoe.length) { buildCountShoe(); resetCountRound(); }
+}
+
+// ═══ PLAY MODE ENGINE ════════════════════════════════════════════════════════
+let playInitialized = false;
+let playBankroll    = 500;
+let playBet         = 0;
+let playLastBet     = 0;
+let playPhase       = 'bet';   // 'bet' | 'play' | 'done'
+let playPlayerCards = [];
+let playDealerCards = [];
+let playSplitHands  = [];
+let playSplitIndex  = 0;
+let playInSplit     = false;
+let playFirstAction = true;
+
+let playStats = {
+  handsPlayed: 0, wins: 0, losses: 0, pushes: 0,
+  blackjacks: 0, biggestWin: 0, biggestLoss: 0,
+  startBankroll: 500
+};
+
+function initPlay() {
+  playInitialized = true;
+  loadPlayState();
+  updatePlayBankrollUI();
+  updateWinningsUI();
+  updatePlayBetDisplay();
+  setPlayChipsEnabled(true);
+  document.getElementById('playActionBtns').style.display = 'none';
+  document.getElementById('playSurrenderArea').style.display = 'none';
+  document.getElementById('btnPlayNext').style.display = 'none';
+  document.getElementById('playDealerHand').innerHTML = '';
+  document.getElementById('playPlayerHand').innerHTML = '';
+  document.getElementById('playResult').style.display = 'none';
+  document.getElementById('playHandInfo').innerHTML = '&nbsp;';
+  document.getElementById('playDealerTotal').textContent = '';
+}
+
+// ─── Betting ─────────────────────────────────────────────────────────────────
+function addChip(value) {
+  if (playPhase !== 'bet') return;
+  if (playBet + value > playBankroll) return;
+  playBet += value;
+  updatePlayBetDisplay();
+}
+
+function clearBet() {
+  if (playPhase !== 'bet') return;
+  playBet = 0;
+  updatePlayBetDisplay();
+}
+
+function doubleBet() {
+  if (playPhase !== 'bet' || !playLastBet) return;
+  playBet = Math.min(playLastBet * 2, playBankroll);
+  updatePlayBetDisplay();
+}
+
+function updatePlayBetDisplay() {
+  document.getElementById('playBetDisplay').textContent = '$' + playBet;
+  document.getElementById('btnDoubleBet').disabled = playPhase !== 'bet' || !playLastBet;
+  document.getElementById('btnClearBet').disabled  = playPhase !== 'bet' || playBet === 0;
+  document.getElementById('btnDealPlay').disabled  = playPhase !== 'bet' || playBet === 0;
+}
+
+// ─── Deal ─────────────────────────────────────────────────────────────────────
+function startPlayHand() {
+  if (playPhase !== 'bet' || playBet === 0) return;
+  if (needsReshuffle) { buildShoe(); needsReshuffle = false; }
+
+  playLastBet      = playBet;
+  playBankroll    -= playBet;
+  playPhase        = 'play';
+  playFirstAction  = true;
+  playInSplit      = false;
+  playSplitHands   = [];
+  playSplitIndex   = 0;
+
+  playPlayerCards = [dealCard(), dealCard()];
+  playDealerCards = [dealCard(), dealCard()];
+
+  setPlayChipsEnabled(false);
+  renderPlayHands(false);
+  updatePlayHandInfo();
+  updatePlayBankrollUI();
+  document.getElementById('playResult').style.display = 'none';
+  document.getElementById('btnPlayNext').style.display = 'none';
+
+  // Natural blackjack check
+  const playerBJ = isBlackjack(playPlayerCards);
+  const dealerBJ = isBlackjack(playDealerCards);
+
+  if (playerBJ || dealerBJ) {
+    renderPlayHands(true);
+    updatePlayDealerTotal(true);
+    if (playerBJ && dealerBJ) {
+      settlePlay('push', playBet);
+    } else if (playerBJ) {
+      settlePlay('blackjack', Math.floor(playBet * 1.5));
+    } else {
+      settlePlay('lose', 0);
+    }
+    return;
+  }
+
+  showPlayActions();
+}
+
+function isBlackjack(cards) {
+  if (cards.length !== 2) return false;
+  return cards.some(c => c.rank === 'A') && cards.some(c => cardValue(c.rank) === 10 && c.rank !== 'A');
+}
+
+// ─── Actions ─────────────────────────────────────────────────────────────────
+function playAction(action) {
+  if (playPhase !== 'play') return;
+  document.getElementById('playActionBtns').style.display = 'none';
+  document.getElementById('playSurrenderArea').style.display = 'none';
+
+  if (action === 'hit') {
+    playFirstAction = false;
+    playPlayerCards.push(dealCard());
+    renderPlayHands(false);
+    updatePlayHandInfo();
+    const total = handTotal(playPlayerCards);
+    if (total >= 21) {
+      setTimeout(playDealerRevealAndSettle, 400);
+    } else {
+      showPlayActions();
+    }
+    return;
+  }
+
+  if (action === 'stand') {
+    playDealerRevealAndSettle();
+    return;
+  }
+
+  if (action === 'double') {
+    if (!playFirstAction || playBankroll < playBet) return;
+    playBankroll -= playBet;
+    playBet      *= 2;
+    updatePlayBankrollUI();
+    playFirstAction = false;
+    playPlayerCards.push(dealCard());
+    renderPlayHands(false);
+    updatePlayHandInfo();
+    setTimeout(playDealerRevealAndSettle, 500);
+    return;
+  }
+
+  if (action === 'split') {
+    if (!playFirstAction || !isPair(playPlayerCards) || playBankroll < playLastBet) return;
+    playBankroll -= playLastBet;
+    updatePlayBankrollUI();
+    playInSplit    = true;
+    playSplitHands = [
+      [playPlayerCards[0], dealCard()],
+      [playPlayerCards[1], dealCard()]
+    ];
+    playSplitIndex  = 0;
+    playPlayerCards = playSplitHands[0];
+    playFirstAction = true;
+    renderPlayHands(false);
+    updatePlayHandInfo();
+    showPlayActions();
+    return;
+  }
+
+  if (action === 'surrender') {
+    if (!playFirstAction || playInSplit) return;
+    const returnAmount = Math.floor(playLastBet / 2);
+    playBankroll += returnAmount;
+    updatePlayBankrollUI();
+    showPlayResult('lose', `Surrender (−$${playLastBet - returnAmount})`);
+    recordPlayResult(-(playLastBet - returnAmount), 'loss');
+    finalizePlay();
+    return;
+  }
+}
+
+// ─── Dealer play-out ─────────────────────────────────────────────────────────
+function playDealerRevealAndSettle() {
+  if (playPhase !== 'play') return;
+  document.getElementById('playActionBtns').style.display = 'none';
+  document.getElementById('playSurrenderArea').style.display = 'none';
+
+  // In split mode, advance to next hand if available
+  if (playInSplit && playSplitIndex < playSplitHands.length - 1) {
+    playSplitIndex++;
+    playPlayerCards = playSplitHands[playSplitIndex];
+    playFirstAction = true;
+    renderPlayHands(false);
+    updatePlayHandInfo();
+    showPlayActions();
+    return;
+  }
+
+  renderPlayHands(true);
+  dealerPlayOut(playDealerCards, () => {
+    updatePlayDealerTotal(true);
+    if (playInSplit) {
+      settleSplitHands();
+    } else {
+      const pTotal = handTotal(playPlayerCards);
+      const dTotal = handTotal(playDealerCards);
+      if (pTotal > 21) {
+        settlePlay('lose', 0);
+      } else if (dTotal > 21 || pTotal > dTotal) {
+        settlePlay('win', playBet);
+      } else if (pTotal === dTotal) {
+        settlePlay('push', playBet);
+      } else {
+        settlePlay('lose', 0);
+      }
+    }
+  });
+}
+
+function dealerPlayOut(cards, callback) {
+  function hitStep() {
+    const total    = handTotal(cards);
+    const soft     = isSoft(cards);
+    const shouldHit = total < 17 || (h17Enabled && soft && total === 17);
+    if (shouldHit) {
+      cards.push(dealCard());
+      renderPlayHands(true);
+      updatePlayDealerTotal(true);
+      setTimeout(hitStep, 450);
+    } else {
+      callback();
+    }
+  }
+  hitStep();
+}
+
+function settleSplitHands() {
+  const dTotal = handTotal(playDealerCards);
+  let netReturn = 0;
+  playSplitHands.forEach(hand => {
+    const pTotal = handTotal(hand);
+    if (pTotal > 21) {
+      // bust — nothing returned (bet already deducted at split)
+    } else if (dTotal > 21 || pTotal > dTotal) {
+      netReturn += playLastBet * 2;  // bet back + win
+    } else if (pTotal === dTotal) {
+      netReturn += playLastBet;       // push — bet back
+    }
+  });
+  playBankroll += netReturn;
+  const totalWagered = playLastBet * playSplitHands.length;
+  const profit = netReturn - totalWagered;
+  if (profit > 0)      showPlayResult('win',  `+$${profit}`);
+  else if (profit < 0) showPlayResult('lose', `−$${Math.abs(profit)}`);
+  else                 showPlayResult('push', 'Push');
+  recordPlayResult(profit, profit > 0 ? 'win' : profit < 0 ? 'loss' : 'push');
+  finalizePlay();
+}
+
+// ─── Settlement ──────────────────────────────────────────────────────────────
+function settlePlay(outcome, returnAmount) {
+  let resultLabel, netProfit, cssClass, resultType;
+
+  if (outcome === 'blackjack') {
+    resultLabel  = `Blackjack! +$${returnAmount}`;
+    netProfit    = returnAmount;
+    playBankroll += playBet + returnAmount; // original bet back + 1.5× bonus
+    cssClass     = 'bj';
+    resultType   = 'win';
+    playStats.blackjacks++;
+  } else if (outcome === 'win') {
+    resultLabel  = `+$${returnAmount}`;
+    netProfit    = returnAmount;
+    playBankroll += playBet + returnAmount;
+    cssClass     = 'win';
+    resultType   = 'win';
+  } else if (outcome === 'push') {
+    resultLabel  = 'Push';
+    netProfit    = 0;
+    playBankroll += playBet;
+    cssClass     = 'push';
+    resultType   = 'push';
+  } else { // lose
+    resultLabel  = `−$${playBet}`;
+    netProfit    = -playBet;
+    cssClass     = 'lose';
+    resultType   = 'loss';
+  }
+
+  showPlayResult(cssClass, resultLabel);
+  recordPlayResult(netProfit, resultType);
+  finalizePlay();
+}
+
+function recordPlayResult(netProfit, resultType) {
+  playStats.handsPlayed++;
+  if (resultType === 'win')  playStats.wins++;
+  if (resultType === 'loss') playStats.losses++;
+  if (resultType === 'push') playStats.pushes++;
+  if (netProfit > playStats.biggestWin)          playStats.biggestWin  = netProfit;
+  if (netProfit < 0 && Math.abs(netProfit) > playStats.biggestLoss)
+    playStats.biggestLoss = Math.abs(netProfit);
+  updateWinningsUI();
+  savePlayState();
+}
+
+function finalizePlay() {
+  playPhase = 'bet';
+  playBet   = 0;
+  updatePlayBankrollUI();
+  updatePlayBetDisplay();
+  setPlayChipsEnabled(true);
+  document.getElementById('playActionBtns').style.display = 'none';
+  document.getElementById('playSurrenderArea').style.display = 'none';
+  document.getElementById('btnPlayNext').style.display = 'block';
+}
+
+function playNextHand() {
+  document.getElementById('btnPlayNext').style.display = 'none';
+  document.getElementById('playResult').style.display = 'none';
+  document.getElementById('playDealerHand').innerHTML = '';
+  document.getElementById('playPlayerHand').innerHTML = '';
+  document.getElementById('playHandInfo').innerHTML = '&nbsp;';
+  document.getElementById('playDealerTotal').textContent = '';
+  if (playBankroll <= 0) {
+    playBankroll = 500;
+    playStats.startBankroll = playBankroll;
+    updatePlayBankrollUI();
+    updateWinningsUI();
+    alert('Bankroll exhausted — resetting to $500!');
+  }
+}
+
+// ─── Render ───────────────────────────────────────────────────────────────────
+function renderPlayHands(revealDealer) {
+  const dh = document.getElementById('playDealerHand');
+  dh.innerHTML = '';
+  playDealerCards.forEach((c, i) =>
+    dh.appendChild(makeCardEl(c, i === 0 && !revealDealer)));
+
+  const ph = document.getElementById('playPlayerHand');
+  ph.innerHTML = '';
+  if (playInSplit) {
+    playSplitHands.forEach((hand, hi) => {
+      const wrapper = document.createElement('div');
+      wrapper.style.cssText = `display:flex;gap:4px;border:2px solid ${
+        hi === playSplitIndex ? '#fbbf24' : 'rgba(255,255,255,0.15)'
+      };border-radius:8px;padding:4px;margin-right:4px;`;
+      hand.forEach(c => wrapper.appendChild(makeCardEl(c)));
+      ph.appendChild(wrapper);
+    });
+  } else {
+    playPlayerCards.forEach(c => ph.appendChild(makeCardEl(c)));
+  }
+}
+
+function updatePlayHandInfo() {
+  const total = handTotal(playPlayerCards);
+  const soft  = isSoft(playPlayerCards) && total <= 21;
+  let desc = soft ? `Soft ${total}` : `${total}`;
+  if (total > 21) desc = `Bust (${total})`;
+  if (total === 21 && playPlayerCards.length === 2) desc = 'Blackjack!';
+  else if (total === 21) desc = '21';
+  document.getElementById('playHandInfo').textContent = `Your hand: ${desc}`;
+}
+
+function updatePlayDealerTotal(show) {
+  if (!show) { document.getElementById('playDealerTotal').textContent = ''; return; }
+  const total = handTotal(playDealerCards);
+  const soft  = isSoft(playDealerCards) && total <= 21;
+  const label = soft ? `Soft ${total}` : `${total}`;
+  const bust  = total > 21 ? ' — Bust!' : '';
+  document.getElementById('playDealerTotal').textContent = `Dealer: ${label}${bust}`;
+}
+
+function showPlayActions() {
+  document.getElementById('playActionBtns').style.display = 'grid';
+  const canDouble = playFirstAction && playBankroll >= playBet;
+  const canSplit  = playFirstAction && isPair(playPlayerCards) && playBankroll >= playLastBet
+                    && (!playInSplit || playSplitHands.length < 4);
+  const canSurr   = surrenderEnabled && playFirstAction && !playInSplit;
+  document.getElementById('playBtnDouble').disabled = !canDouble;
+  document.getElementById('playBtnSplit').disabled  = !canSplit;
+  document.getElementById('playSurrenderArea').style.display = canSurr ? 'block' : 'none';
+}
+
+function showPlayResult(cssClass, label) {
+  const el = document.getElementById('playResult');
+  el.className = `play-result ${cssClass}`;
+  el.textContent = label;
+  el.style.display = 'block';
+}
+
+function updatePlayBankrollUI() {
+  const net = playBankroll - playStats.startBankroll;
+  document.getElementById('playBankroll').textContent = `$${playBankroll}`;
+  const nlEl = document.getElementById('playNetPL');
+  nlEl.textContent = (net >= 0 ? '+' : '') + `$${net}`;
+  nlEl.className = `bankroll-value ${net > 0 ? 'bankroll-pos' : net < 0 ? 'bankroll-neg' : 'bankroll-neu'}`;
+}
+
+function updateWinningsUI() {
+  document.getElementById('wHandsPlayed').textContent = playStats.handsPlayed;
+  document.getElementById('wWins').textContent        = playStats.wins;
+  document.getElementById('wLosses').textContent      = playStats.losses;
+  document.getElementById('wPushes').textContent      = playStats.pushes;
+  document.getElementById('wBJs').textContent         = playStats.blackjacks;
+  document.getElementById('wBigWin').textContent      = `$${playStats.biggestWin}`;
+  document.getElementById('wBigLoss').textContent     = `$${playStats.biggestLoss}`;
+}
+
+function setPlayChipsEnabled(enabled) {
+  ['chip5','chip10','chip25','chip50','chip100','btnDealPlay'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = !enabled;
+  });
+}
+
+function toggleWinnings() {
+  const body  = document.getElementById('winningsBody');
+  const title = document.querySelector('.winnings-title');
+  const open  = body.style.display !== 'none';
+  body.style.display = open ? 'none' : '';
+  title.textContent  = (open ? '▶' : '▼') + ' Session Stats';
+}
+
+function savePlayState() {
+  try {
+    localStorage.setItem('bjPlay', JSON.stringify({ playBankroll, playLastBet, playStats }));
+  } catch(e) {}
+}
+
+function loadPlayState() {
+  try {
+    const s = JSON.parse(localStorage.getItem('bjPlay') || 'null');
+    if (!s) return;
+    playBankroll = s.playBankroll || 500;
+    playLastBet  = s.playLastBet  || 0;
+    Object.assign(playStats, s.playStats || {});
+    if (!playStats.startBankroll) playStats.startBankroll = 500;
+  } catch(e) {}
+}
+
+function resetPlaySession() {
+  if (!confirm('Reset play session? Bankroll returns to $500.')) return;
+  playBankroll = 500;
+  playLastBet  = 0;
+  playBet      = 0;
+  playStats = { handsPlayed:0, wins:0, losses:0, pushes:0, blackjacks:0, biggestWin:0, biggestLoss:0, startBankroll:500 };
+  savePlayState();
+  updatePlayBankrollUI();
+  updateWinningsUI();
+  updatePlayBetDisplay();
+  document.getElementById('playDealerHand').innerHTML = '';
+  document.getElementById('playPlayerHand').innerHTML = '';
+  document.getElementById('playResult').style.display = 'none';
+  document.getElementById('playActionBtns').style.display = 'none';
+  document.getElementById('playSurrenderArea').style.display = 'none';
+  document.getElementById('btnPlayNext').style.display = 'none';
+  document.getElementById('playHandInfo').innerHTML = '&nbsp;';
+  document.getElementById('playDealerTotal').textContent = '';
+}
+
+// ═══ CARD COUNTING TRAINER ════════════════════════════════════════════════════
+let countShoe       = [];
+let countShoeIndex  = 0;
+let countRunning    = 0;
+let countDealTimer  = null;
+let countRoundActive = false;
+let countCorrectAll = 0;
+let countAttempts   = 0;
+let countStreak     = 0;
+
+function buildCountShoe() {
+  const decks = parseInt(document.getElementById('countDeckSel').value) || 6;
+  countShoe = [];
+  for (let d = 0; d < decks; d++) {
+    for (const suit of SUITS) {
+      for (const rank of RANKS) {
+        countShoe.push({ rank, suit });
+      }
+    }
+  }
+  for (let i = countShoe.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [countShoe[i], countShoe[j]] = [countShoe[j], countShoe[i]];
+  }
+  countShoeIndex = 0;
+}
+
+function hiLoValue(rank) {
+  const v = cardValue(rank);
+  if (v >= 2 && v <= 6) return +1;
+  if (v === 7 || v === 8 || v === 9) return 0;
+  return -1; // 10, J, Q, K, A
+}
+
+function onCountSettingChange() {
+  buildCountShoe();
+  resetCountRound();
+}
+
+function resetCountRound() {
+  if (!countShoe.length) buildCountShoe();
+  clearTimeout(countDealTimer);
+  countRoundActive = false;
+  countRunning = 0;
+  document.getElementById('countDealArea').innerHTML = '';
+  document.getElementById('countInputArea').style.display  = 'none';
+  document.getElementById('countFeedback').style.display   = 'none';
+  document.getElementById('btnCountStart').style.display   = 'block';
+  document.getElementById('btnCountNext').style.display    = 'none';
+  document.getElementById('countGuess').value = '';
+  document.getElementById('countStatus').textContent = 'Press Start to begin a round';
+  document.getElementById('btnSubmitCount').disabled = true;
+}
+
+function startCountRound() {
+  if (!countShoe.length) buildCountShoe();
+  const numCards = parseInt(document.getElementById('countCardCount').value) || 10;
+  if (countShoeIndex + numCards > countShoe.length) buildCountShoe();
+
+  countRoundActive = true;
+  countRunning = 0;
+
+  document.getElementById('countDealArea').innerHTML = '';
+  document.getElementById('countFeedback').style.display = 'none';
+  document.getElementById('btnCountStart').style.display = 'none';
+  document.getElementById('btnCountNext').style.display  = 'none';
+  document.getElementById('countInputArea').style.display = 'none';
+  document.getElementById('btnSubmitCount').disabled = true;
+
+  let i = 0;
+  function dealNext() {
+    if (i >= numCards) {
+      document.getElementById('countStatus').textContent =
+        `What is the running count after ${numCards} cards?`;
+      document.getElementById('countInputArea').style.display = 'flex';
+      document.getElementById('btnSubmitCount').disabled = false;
+      document.getElementById('countGuess').focus();
+      return;
+    }
+    const card = countShoe[countShoeIndex++];
+    countRunning += hiLoValue(card.rank);
+
+    const el = makeCardEl(card);
+    el.classList.add('card-dealing');
+    document.getElementById('countDealArea').appendChild(el);
+
+    document.getElementById('countStatus').textContent =
+      `Dealing card ${i + 1} of ${numCards}…`;
+
+    i++;
+    countDealTimer = setTimeout(dealNext, 700);
+  }
+  dealNext();
+}
+
+function submitCount() {
+  if (!countRoundActive) return;
+  const guess = parseInt(document.getElementById('countGuess').value);
+  if (isNaN(guess)) return;
+
+  document.getElementById('btnSubmitCount').disabled = true;
+  countAttempts++;
+  const isCorrect = guess === countRunning;
+
+  const fb = document.getElementById('countFeedback');
+  fb.style.display = 'flex';
+
+  if (isCorrect) {
+    countCorrectAll++;
+    countStreak++;
+    fb.className = 'count-feedback correct';
+    fb.innerHTML = `<span style="font-size:1.3rem">✅</span><span><strong>Correct!</strong> The running count was <strong>${countRunning}</strong>.</span>`;
+  } else {
+    countStreak = 0;
+    fb.className = 'count-feedback wrong';
+    fb.innerHTML = `<span style="font-size:1.3rem">❌</span><span><strong>Not quite.</strong> You guessed <strong>${guess}</strong> but the running count was <strong>${countRunning}</strong>.</span>`;
+  }
+
+  document.getElementById('countCorrect').textContent  = countCorrectAll;
+  document.getElementById('countAttempts').textContent = countAttempts;
+  document.getElementById('countStreak').textContent   = countStreak;
+  document.getElementById('countStatus').textContent   = '';
+  document.getElementById('countInputArea').style.display = 'none';
+  document.getElementById('btnCountNext').style.display  = 'block';
+  countRoundActive = false;
 }
 
 // ─── Init ────────────────────────────────────────────────────────────────────
