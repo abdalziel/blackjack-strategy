@@ -2621,8 +2621,10 @@ function startMultiHand() {
     // Update seat info
     activeSeats.forEach(i => updateSeatInfo(i));
 
-    // Check dealer blackjack first (peek)
-    const dealerBJ = isBlackjack(pDealerCards);
+    // Check dealer blackjack first (peek) — only possible when upcard is A or 10-value
+    const upRank = pDealerCards[1].rank;
+    const upCanBJ = upRank === 'A' || cardValue(upRank) === 10;
+    const dealerBJ = upCanBJ && isBlackjack(pDealerCards);
     if (dealerBJ) {
       flipHoleCard();
       updatePlayDealerTotal(true);
