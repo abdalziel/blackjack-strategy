@@ -655,9 +655,18 @@
   display: flex;
   gap: 8px;
   justify-content: center;
-  min-height: 100px;
+  min-height: 62px;
   align-items: center;
 }
+.dealer-hand-row .card {
+  width: 38px !important;
+  height: 54px !important;
+  font-size: 0.65rem !important;
+  padding: 2px 3px !important;
+  box-shadow: 1px 2px 5px rgba(0,0,0,0.4) !important;
+}
+.dealer-hand-row .card-center { font-size: 0.82rem !important; }
+.dealer-hand-row .card-top, .dealer-hand-row .card-bottom { font-size: 0.58rem !important; }
 
 .seats-row {
   display: flex;
@@ -681,25 +690,16 @@
 }
 .seat:hover { background: rgba(255,255,255,0.04); }
 
-/* Seat cards - smaller than main game */
+/* Seat cards - larger than dealer */
 .seat-cards {
   display: flex;
   flex-wrap: wrap;
-  gap: 2px;
+  gap: 4px;
   justify-content: center;
-  min-height: 62px;
+  min-height: 108px;
   align-items: flex-end;
   width: 100%;
 }
-.seat .card {
-  width: 38px !important;
-  height: 54px !important;
-  font-size: 0.65rem !important;
-  padding: 2px 3px !important;
-  box-shadow: 1px 2px 5px rgba(0,0,0,0.4) !important;
-}
-.seat .card-center { font-size: 0.82rem !important; }
-.seat .card-top, .seat .card-bottom { font-size: 0.58rem !important; }
 
 .seat-info {
   font-size: 0.62rem;
@@ -805,8 +805,9 @@
 @media (max-width: 520px) {
   .bet-circle { width: 50px; height: 50px; }
   .bet-chip   { width: 36px; height: 36px; font-size: 0.5rem; }
-  .seat .card { width: 32px !important; height: 46px !important; }
-  .seat .card-center { font-size: 0.72rem !important; }
+  .seat .card { width: 52px !important; height: 74px !important; }
+  .seat .card-center { font-size: 1.2rem !important; }
+  .seat .card-top, .seat .card-bottom { font-size: 0.75rem !important; }
 }
 
 /* Play-mode rule selectors */
