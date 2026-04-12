@@ -2434,7 +2434,7 @@ const NUM_SEATS = 5;
 
 function makeSeat() {
   return { bet: 0, cards: [], splitHands: [], splitIdx: 0, inSplit: false,
-           firstAction: true, result: null, extraBet: 0, insuranceBet: 0 };
+           firstAction: true, result: null, extraBet: 0, insuranceBet: 0, splitExtraBets: [] };
 }
 
 let pSeats        = Array.from({length: NUM_SEATS}, makeSeat);
@@ -2617,7 +2617,7 @@ function startMultiHand() {
   pSeats.forEach(s => {
     s.cards = [];
     s.splitHands = []; s.splitIdx = 0; s.inSplit = false;
-    s.firstAction = true; s.result = null; s.extraBet = 0;
+    s.firstAction = true; s.result = null; s.extraBet = 0; s.splitExtraBets = [];
   });
 
   // Deal dealer cards
@@ -2849,7 +2849,11 @@ function playMultiAction(action) {
   if (action === 'double') {
     if (!seat.firstAction || playBankroll < seat.bet) return;
     playBankroll -= seat.bet;
-    seat.extraBet += seat.bet;
+    if (seat.inSplit) {
+      seat.splitExtraBets[seat.splitIdx] = (seat.splitExtraBets[seat.splitIdx] || 0) + seat.bet;
+    } else {
+      seat.extraBet += seat.bet;
+    }
     updatePlayBankrollUI();
     seat.firstAction = false;
     const c = dealPlayCard(); cards.push(c);
@@ -2864,6 +2868,7 @@ function playMultiAction(action) {
     playBankroll -= seat.bet;
     updatePlayBankrollUI();
     seat.inSplit = true;
+    seat.splitExtraBets = [];
     seat.splitHands = [
       [seat.cards[0], dealPlayCard()],
       [seat.cards[1], dealPlayCard()]
@@ -2936,9 +2941,49 @@ function startDealerPlay() {
 function settleSeat(idx, forceOutcome) {
   const seat = pSeats[idx];
   if (!seat.bet) return;
-  const outcome = forceOutcome || computeOutcome(idx);
-  const betTotal = seat.bet + seat.extraBet;
 
+  // Split hands: each settled independently. 21 after split = regular 21, not BJ.
+  if (seat.inSplit && !forceOutcome) {
+    const dTotal = handTotal(pDealerCards);
+    let netProfit = 0, wins = 0, losses = 0, pushes = 0;
+
+    seat.splitHands.forEach((hand, hi) => {
+      const handBet = seat.bet + (seat.splitExtraBets[hi] || 0);
+      const hTotal  = handTotal(hand);
+      if (hTotal > 21) {
+        netProfit -= handBet; losses++;
+      } else if (dTotal > 21 || hTotal > dTotal) {
+        playBankroll += handBet * 2; netProfit += handBet; wins++;
+      } else if (hTotal === dTotal) {
+        playBankroll += handBet; pushes++;
+      } else {
+        netProfit -= handBet; losses++;
+      }
+    });
+
+    let label, cssClass, resultType;
+    if (wins > 0 && losses === 0) {
+      label = `+$${netProfit}`; cssClass = 'win'; resultType = 'win';
+    } else if (losses > 0 && wins === 0 && pushes === 0) {
+      label = `−$${Math.abs(netProfit)}`; cssClass = 'lose'; resultType = 'loss';
+    } else if (wins === 0 && losses === 0) {
+      label = 'Push'; cssClass = 'push'; resultType = 'push';
+    } else {
+      const sign = netProfit > 0 ? '+' : '−';
+      label = `${sign}$${Math.abs(netProfit)}`;
+      cssClass  = netProfit > 0 ? 'win' : netProfit < 0 ? 'lose' : 'push';
+      resultType = netProfit > 0 ? 'win' : netProfit < 0 ? 'loss' : 'push';
+    }
+
+    showSeatResult(idx, cssClass, label);
+    recordPlayResult(netProfit, resultType);
+    seat.bet = netProfit >= 0 ? pLastBets[idx] : 0;
+    return;
+  }
+
+  // Standard single-hand settlement
+  const outcome  = forceOutcome || computeOutcome(idx);
+  const betTotal = seat.bet + seat.extraBet;
   let label, netProfit, cssClass, resultType;
 
   if (outcome === 'bj') {
@@ -2952,35 +2997,22 @@ function settleSeat(idx, forceOutcome) {
   } else if (outcome === 'push') {
     playBankroll += betTotal;
     label = 'Push'; netProfit = 0; cssClass = 'push'; resultType = 'push';
-  } else { // lose
+  } else {
     label = `−$${betTotal}`; netProfit = -betTotal; cssClass = 'lose'; resultType = 'loss';
   }
 
   showSeatResult(idx, cssClass, label);
   recordPlayResult(netProfit, resultType);
-
-  // Persist bet on table if won or pushed (original bet only, not double)
   if (outcome === 'win' || outcome === 'push' || outcome === 'bj') {
-    seat.bet = pLastBets[idx]; // restore original bet
+    seat.bet = pLastBets[idx];
   } else {
     seat.bet = 0;
   }
 }
 
 function computeOutcome(idx) {
-  const seat = pSeats[idx];
+  const seat   = pSeats[idx];
   const dTotal = handTotal(pDealerCards);
-
-  if (seat.inSplit) {
-    // For split, just compare the last hand played (simplified: use best hand)
-    const totals = seat.splitHands.map(h => handTotal(h)).filter(t => t <= 21);
-    if (!totals.length) return 'lose'; // all busted
-    const best = Math.max(...totals);
-    if (dTotal > 21 || best > dTotal) return 'win';
-    if (best === dTotal) return 'push';
-    return 'lose';
-  }
-
   const pTotal = handTotal(seat.cards);
   if (pTotal > 21) return 'lose';
   if (dTotal > 21 || pTotal > dTotal) return 'win';
@@ -3019,7 +3051,8 @@ function prepareNextHand() {
   pDealerCards = [];
   pSeats.forEach(s => {
     s.cards = []; s.splitHands = []; s.splitIdx = 0;
-    s.inSplit = false; s.firstAction = true; s.result = null; s.extraBet = 0; s.insuranceBet = 0;
+    s.inSplit = false; s.firstAction = true; s.result = null;
+    s.extraBet = 0; s.insuranceBet = 0; s.splitExtraBets = [];
   });
   document.getElementById('btnPlayNext').style.display = 'none';
   document.getElementById('playDealerHand').innerHTML = '';
