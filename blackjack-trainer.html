@@ -1090,7 +1090,8 @@ function updateHandInfo() {
   const total    = handTotal(playerCards);
   const soft     = isSoft(playerCards) && total <= 21;
   const pair     = isPair(playerCards);
-  const dealerUp = dealerCards[1].rank;
+  const dealerUpRaw = dealerCards[1].rank;
+  const dealerUp = ['J','Q','K'].includes(dealerUpRaw) ? '10' : dealerUpRaw;
 
   let handDesc = '';
   if (pair && playerCards[0].rank === 'A') handDesc = 'Pair of Aces';
@@ -1311,7 +1312,7 @@ function getExplanation(cards, dealerRank, correctAction) {
 
 // ─── Study Tracker ───────────────────────────────────────────────────────────
 function getTrackingKey(cards, dealerRank) {
-  return `${describeHand(cards)}|${cardValue(dealerRank) >= 10 ? '10' : dealerRank}`;
+  return `${describeHand(cards)}|${cardValue(dealerRank) === 10 ? '10' : dealerRank}`;
 }
 
 function trackMistake(cards, dealerRank) {
