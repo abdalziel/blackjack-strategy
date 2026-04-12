@@ -818,6 +818,22 @@ body[data-tab="play"] { padding-left: 0; padding-right: 0; }
   margin-top: -3px;
 }
 
+.insurance-msg {
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #fde68a;
+  margin-bottom: 12px;
+  white-space: pre-line;
+  line-height: 1.5;
+}
+.insurance-btns {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
 .playing-seat-label {
   text-align: center;
   font-size: 0.78rem;
@@ -1283,6 +1299,14 @@ body[data-tab="play"] { padding-left: 0; padding-right: 0; }
     </div>
     <div class="play-action-full" id="playSurrenderArea" style="display:none">
       <button class="btn btn-surrender" onclick="playMultiAction('surrender')">Surrender</button>
+    </div>
+
+    <div id="insuranceArea" style="display:none">
+      <div class="insurance-msg" id="insuranceMsg"></div>
+      <div class="insurance-btns">
+        <button class="tray-btn deal-btn" id="insuranceBtn1"></button>
+        <button class="tray-btn" id="insuranceBtn2"></button>
+      </div>
     </div>
 
     <button class="btn-next" id="btnPlayNext" style="display:none" onclick="prepareNextHand()">Next Hand &rarr;</button>
@@ -2410,15 +2434,18 @@ const NUM_SEATS = 5;
 
 function makeSeat() {
   return { bet: 0, cards: [], splitHands: [], splitIdx: 0, inSplit: false,
-           firstAction: true, result: null, extraBet: 0 };
+           firstAction: true, result: null, extraBet: 0, insuranceBet: 0 };
 }
 
 let pSeats        = Array.from({length: NUM_SEATS}, makeSeat);
 let pSelectedSeat = 2;   // centre seat selected by default
 let pCurrentSeat  = -1;  // seat currently being played
 let pDealerCards  = [];
-let pPlayPhase    = 'bet'; // 'bet' | 'play' | 'done'
+let pPlayPhase    = 'bet'; // 'bet' | 'insurance' | 'play' | 'dealer' | 'done'
 let pLastBets     = Array(NUM_SEATS).fill(0);
+let pActiveSeats  = [];   // seats with bets this hand
+let pEvenMoneyQueue = []; // BJ seats awaiting even money decision (dealer shows A)
+let pInsurableSeats = []; // non-BJ seats awaiting insurance decision
 
 // Chip colours & denominations
 const CHIP_COLORS = { 5:'#dc2626', 10:'#2563eb', 25:'#15803d', 50:'#7c3aed', 100:'#92400e' };
@@ -2578,6 +2605,7 @@ function startMultiHand() {
   if (pPlayPhase !== 'bet') return;
   const activeSeats = pSeats.map((s, i) => i).filter(i => pSeats[i].bet > 0);
   if (!activeSeats.length) return;
+  pActiveSeats = activeSeats;
   if (playNeedsReshuffle) buildPlayShoe();
 
   // Save bets and deduct from bankroll
@@ -2632,35 +2660,139 @@ function startMultiHand() {
   setTimeout(() => appendAnimatedCard('playDealerHand', pDealerCards[1]), t); t += D;
 
   setTimeout(() => {
-    // Update seat info
     activeSeats.forEach(i => updateSeatInfo(i));
 
-    // Check dealer blackjack first (peek) — only possible when upcard is A or 10-value
-    const upRank = pDealerCards[1].rank;
-    const upCanBJ = upRank === 'A' || cardValue(upRank) === 10;
-    const dealerBJ = upCanBJ && isBlackjack(pDealerCards);
-    if (dealerBJ) {
-      flipHoleCard();
-      updatePlayDealerTotal(true);
-      activeSeats.forEach(i => {
-        const seatBJ = isBlackjack(pSeats[i].cards);
-        settleSeat(i, seatBJ ? 'push' : 'lose');
-      });
-      finishHand();
-      return;
-    }
-
-    // Check any player blackjacks
+    // Mark any player blackjacks before insurance/even-money decisions
     activeSeats.forEach(i => {
-      if (isBlackjack(pSeats[i].cards)) {
-        pSeats[i].result = 'bj'; // will be settled at end
-      }
+      if (isBlackjack(pSeats[i].cards)) pSeats[i].result = 'bj';
     });
 
-    // Start playing seats
-    pCurrentSeat = -1;
-    advanceToNextSeat();
+    const upRank = pDealerCards[1].rank;
+    if (upRank === 'A') {
+      startInsurancePhase();
+    } else {
+      checkDealerBJAndPlay();
+    }
   }, t + 80);
+}
+
+// ─── Dealer 10-value peek (no insurance) ─────────────────────────────────────
+function checkDealerBJAndPlay() {
+  if (isBlackjack(pDealerCards)) {
+    flipHoleCard();
+    updatePlayDealerTotal(true);
+    pActiveSeats.forEach(i => {
+      settleSeat(i, pSeats[i].result === 'bj' ? 'push' : 'lose');
+    });
+    finishHand();
+    return;
+  }
+  pPlayPhase = 'play';
+  pCurrentSeat = -1;
+  advanceToNextSeat();
+}
+
+// ─── Insurance / Even Money ───────────────────────────────────────────────────
+function startInsurancePhase() {
+  pPlayPhase = 'insurance';
+  pEvenMoneyQueue = pActiveSeats.filter(i => pSeats[i].result === 'bj');
+  pInsurableSeats = pActiveSeats.filter(i => pSeats[i].result !== 'bj');
+  nextInsuranceStep();
+}
+
+function nextInsuranceStep() {
+  if (pEvenMoneyQueue.length > 0) {
+    offerEvenMoney(pEvenMoneyQueue.shift());
+  } else {
+    const insurable = pInsurableSeats.filter(i => pSeats[i].result === null);
+    const cost = insurable.reduce((s, i) => s + Math.floor(pSeats[i].bet / 2), 0);
+    if (cost > 0 && cost <= playBankroll) {
+      offerInsurance(insurable, cost);
+    } else {
+      proceedAfterInsurance();
+    }
+  }
+}
+
+function offerEvenMoney(idx) {
+  const bet = pSeats[idx].bet;
+  showInsuranceUI(
+    `Seat ${idx + 1} — You have Blackjack! Dealer shows Ace.\nTake Even Money ($${bet}) guaranteed, or play for 3:2?`,
+    `Even Money  ($${bet})`, () => handleEvenMoney(idx, true),
+    'No — Play for 3:2',     () => handleEvenMoney(idx, false)
+  );
+}
+
+function handleEvenMoney(idx, accept) {
+  if (accept) {
+    playBankroll += pSeats[idx].bet * 2; // original bet back + 1:1 profit
+    pSeats[idx].result = 'even-money';
+    showSeatResult(idx, 'win', `Even $${pSeats[idx].bet}`);
+    recordPlayResult(pSeats[idx].bet, 'win');
+    pSeats[idx].bet = pLastBets[idx];
+    updatePlayBankrollUI();
+  }
+  nextInsuranceStep();
+}
+
+function offerInsurance(insurable, cost) {
+  pInsurableSeats = insurable; // store for handleInsurance
+  const seats = insurable.length === 1
+    ? `Seat ${insurable[0] + 1}`
+    : `Seats ${insurable.map(i => i + 1).join(', ')}`;
+  showInsuranceUI(
+    `Dealer shows Ace. Buy Insurance for ${seats}?\nCost: $${cost}  —  pays 2:1 if dealer has Blackjack`,
+    `Buy Insurance  ($${cost})`, () => handleInsurance(true),
+    'No Insurance',             () => handleInsurance(false)
+  );
+}
+
+function handleInsurance(accept) {
+  if (accept) {
+    pInsurableSeats.forEach(i => {
+      const cost = Math.floor(pSeats[i].bet / 2);
+      pSeats[i].insuranceBet = cost;
+      playBankroll -= cost;
+    });
+    updatePlayBankrollUI();
+  }
+  proceedAfterInsurance();
+}
+
+function proceedAfterInsurance() {
+  document.getElementById('insuranceArea').style.display = 'none';
+
+  if (isBlackjack(pDealerCards)) {
+    flipHoleCard();
+    updatePlayDealerTotal(true);
+    pActiveSeats.forEach(i => {
+      if (pSeats[i].result === 'even-money') return; // already settled
+      if (pSeats[i].insuranceBet > 0) {
+        playBankroll += pSeats[i].insuranceBet * 3; // return bet + 2:1 payout
+        updatePlayBankrollUI();
+      }
+      settleSeat(i, pSeats[i].result === 'bj' ? 'push' : 'lose');
+    });
+    finishHand();
+    return;
+  }
+
+  // No dealer BJ — insurance bets are lost (already deducted), play on
+  pPlayPhase = 'play';
+  pCurrentSeat = -1;
+  advanceToNextSeat();
+}
+
+function showInsuranceUI(message, btn1Text, btn1Fn, btn2Text, btn2Fn) {
+  document.getElementById('playActionBtns').style.display = 'none';
+  document.getElementById('playSurrenderArea').style.display = 'none';
+  const area = document.getElementById('insuranceArea');
+  area.style.display = '';
+  document.getElementById('insuranceMsg').textContent = message;
+  const b1 = document.getElementById('insuranceBtn1');
+  const b2 = document.getElementById('insuranceBtn2');
+  b1.textContent = btn1Text; b1.onclick = btn1Fn;
+  b2.textContent = btn2Text; b2.onclick = btn2Fn;
 }
 
 // ─── Seat play-through ────────────────────────────────────────────────────────
@@ -2859,7 +2991,7 @@ function computeOutcome(idx) {
 function settleAllSeats() {
   pSeats.forEach((s, i) => {
     if (s.bet > 0 && (s.result === 'pending' || s.result === 'bj')) {
-      settleSeat(i);
+      settleSeat(i, s.result === 'bj' ? 'bj' : undefined);
     }
   });
   finishHand();
@@ -2887,7 +3019,7 @@ function prepareNextHand() {
   pDealerCards = [];
   pSeats.forEach(s => {
     s.cards = []; s.splitHands = []; s.splitIdx = 0;
-    s.inSplit = false; s.firstAction = true; s.result = null; s.extraBet = 0;
+    s.inSplit = false; s.firstAction = true; s.result = null; s.extraBet = 0; s.insuranceBet = 0;
   });
   document.getElementById('btnPlayNext').style.display = 'none';
   document.getElementById('playDealerHand').innerHTML = '';
