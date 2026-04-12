@@ -667,6 +667,12 @@
 }
 .card-dealing { animation: cardDeal 0.35s ease-out forwards; }
 
+@keyframes cardFlip {
+  from { transform: rotateY(90deg) scaleX(0.6); opacity: 0.4; }
+  to   { transform: rotateY(0deg)  scaleX(1);   opacity: 1;   }
+}
+.card-flip { animation: cardFlip 0.22s ease-out forwards; }
+
 .count-status {
   text-align: center; font-size: 1rem; opacity: 0.75;
   margin-bottom: 16px; min-height: 24px;
@@ -2040,6 +2046,23 @@ function updatePlayBetDisplay() {
   document.getElementById('btnDealPlay').disabled  = playPhase !== 'bet' || playBet === 0;
 }
 
+// ─── Deal animation helpers ───────────────────────────────────────────────────
+function appendAnimatedCard(containerId, card, faceDown = false) {
+  const el = makeCardEl(card, faceDown);
+  el.classList.add('card-dealing');
+  document.getElementById(containerId).appendChild(el);
+  return el;
+}
+
+function flipHoleCard() {
+  const dh = document.getElementById('playDealerHand');
+  const holeEl = dh.firstElementChild;
+  if (!holeEl) return;
+  const faceUpEl = makeCardEl(playDealerCards[0], false);
+  faceUpEl.classList.add('card-flip');
+  dh.replaceChild(faceUpEl, holeEl);
+}
+
 // ─── Deal ─────────────────────────────────────────────────────────────────────
 function startPlayHand() {
   if (playPhase !== 'bet' || playBet === 0) return;
@@ -2057,30 +2080,36 @@ function startPlayHand() {
   playDealerCards = [dealCard(), dealCard()];
 
   setPlayChipsEnabled(false);
-  renderPlayHands(false);
-  updatePlayHandInfo();
-  updatePlayBankrollUI();
+
+  // Clear table
+  document.getElementById('playDealerHand').innerHTML = '';
+  document.getElementById('playPlayerHand').innerHTML = '';
+  document.getElementById('playHandInfo').innerHTML = '&nbsp;';
+  document.getElementById('playDealerTotal').textContent = '';
   document.getElementById('playResult').style.display = 'none';
   document.getElementById('btnPlayNext').style.display = 'none';
+  updatePlayBankrollUI();
 
-  // Natural blackjack check
-  const playerBJ = isBlackjack(playPlayerCards);
-  const dealerBJ = isBlackjack(playDealerCards);
-
-  if (playerBJ || dealerBJ) {
-    renderPlayHands(true);
-    updatePlayDealerTotal(true);
-    if (playerBJ && dealerBJ) {
-      settlePlay('push', playBet);
-    } else if (playerBJ) {
-      settlePlay('blackjack', Math.floor(playBet * 1.5));
-    } else {
-      settlePlay('lose', 0);
+  // Animated deal: P1 → D-hole → P2 → D-upcard
+  const D = 280;
+  setTimeout(() => appendAnimatedCard('playPlayerHand', playPlayerCards[0]),        0);
+  setTimeout(() => appendAnimatedCard('playDealerHand',  playDealerCards[0], true),  D);
+  setTimeout(() => appendAnimatedCard('playPlayerHand', playPlayerCards[1]),         D * 2);
+  setTimeout(() => appendAnimatedCard('playDealerHand',  playDealerCards[1]),        D * 3);
+  setTimeout(() => {
+    updatePlayHandInfo();
+    const playerBJ = isBlackjack(playPlayerCards);
+    const dealerBJ = isBlackjack(playDealerCards);
+    if (playerBJ || dealerBJ) {
+      flipHoleCard();
+      updatePlayDealerTotal(true);
+      if (playerBJ && dealerBJ)  settlePlay('push',      playBet);
+      else if (playerBJ)         settlePlay('blackjack', Math.floor(playBet * 1.5));
+      else                       settlePlay('lose',       0);
+      return;
     }
-    return;
-  }
-
-  showPlayActions();
+    showPlayActions();
+  }, D * 4 + 80);
 }
 
 function isBlackjack(cards) {
@@ -2096,12 +2125,13 @@ function playAction(action) {
 
   if (action === 'hit') {
     playFirstAction = false;
-    playPlayerCards.push(dealCard());
-    renderPlayHands(false);
+    const newCard = dealCard();
+    playPlayerCards.push(newCard);
+    appendAnimatedCard('playPlayerHand', newCard);
     updatePlayHandInfo();
     const total = handTotal(playPlayerCards);
     if (total >= 21) {
-      setTimeout(playDealerRevealAndSettle, 400);
+      setTimeout(playDealerRevealAndSettle, 450);
     } else {
       showPlayActions();
     }
@@ -2119,10 +2149,11 @@ function playAction(action) {
     playBet      *= 2;
     updatePlayBankrollUI();
     playFirstAction = false;
-    playPlayerCards.push(dealCard());
-    renderPlayHands(false);
+    const doubleCard = dealCard();
+    playPlayerCards.push(doubleCard);
+    appendAnimatedCard('playPlayerHand', doubleCard);
     updatePlayHandInfo();
-    setTimeout(playDealerRevealAndSettle, 500);
+    setTimeout(playDealerRevealAndSettle, 550);
     return;
   }
 
@@ -2173,7 +2204,7 @@ function playDealerRevealAndSettle() {
     return;
   }
 
-  renderPlayHands(true);
+  flipHoleCard();
   dealerPlayOut(playDealerCards, () => {
     updatePlayDealerTotal(true);
     if (playInSplit) {
@@ -2200,10 +2231,11 @@ function dealerPlayOut(cards, callback) {
     const soft     = isSoft(cards);
     const shouldHit = total < 17 || (h17Enabled && soft && total === 17);
     if (shouldHit) {
-      cards.push(dealCard());
-      renderPlayHands(true);
+      const dealerHit = dealCard();
+      cards.push(dealerHit);
+      appendAnimatedCard('playDealerHand', dealerHit);
       updatePlayDealerTotal(true);
-      setTimeout(hitStep, 450);
+      setTimeout(hitStep, 500);
     } else {
       callback();
     }
