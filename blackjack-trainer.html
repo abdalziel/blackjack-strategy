@@ -3093,7 +3093,7 @@ function showMultiActions() {
   const seat = pSeats[pCurrentSeat];
   const cards = seat.inSplit ? seat.splitHands[seat.splitIdx] : seat.cards;
   document.getElementById('playActionBtns').style.display = 'grid';
-  const canDouble = seat.firstAction && playBankroll >= seat.bet && !seat.inSplit;
+  const canDouble = seat.firstAction && playBankroll >= seat.bet && (!seat.inSplit || playDasEnabled);
   const canSplit  = seat.firstAction && isPair(seat.cards) && !seat.inSplit && playBankroll >= seat.bet;
   const canSurr   = playSurrenderEnabled && seat.firstAction && !seat.inSplit;
   document.getElementById('playBtnDouble').disabled = !canDouble;
