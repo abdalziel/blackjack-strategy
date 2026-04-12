@@ -772,6 +772,13 @@ body[data-tab="play"] { padding-left: 0; padding-right: 0; }
   position: absolute;
   inset: 0;
 }
+.double-stack {
+  position: absolute;
+  right: calc(100% + 6px);
+  top: 0;
+  bottom: 0;
+  width: 42px;
+}
 
 /* Individual chip in a bet circle */
 .bet-chip {
@@ -1231,7 +1238,7 @@ body[data-tab="play"] { padding-left: 0; padding-right: 0; }
         <div class="seat-cards" id="seat-cards-0"></div>
         <div class="seat-info" id="seat-info-0"></div>
         <div class="seat-result-badge" id="seat-result-0" style="visibility:hidden">&nbsp;</div>
-        <div class="bet-circle" id="bet-circle-0"><div class="chip-stack" id="chip-stack-0"></div></div>
+        <div class="bet-circle" id="bet-circle-0"><div class="chip-stack" id="chip-stack-0"></div><div class="double-stack" id="double-stack-0"></div></div>
         <div class="bet-amount-label" id="bet-label-0"></div>
         <div class="seat-label">Seat 1</div>
       </div>
@@ -1239,7 +1246,7 @@ body[data-tab="play"] { padding-left: 0; padding-right: 0; }
         <div class="seat-cards" id="seat-cards-1"></div>
         <div class="seat-info" id="seat-info-1"></div>
         <div class="seat-result-badge" id="seat-result-1" style="visibility:hidden">&nbsp;</div>
-        <div class="bet-circle" id="bet-circle-1"><div class="chip-stack" id="chip-stack-1"></div></div>
+        <div class="bet-circle" id="bet-circle-1"><div class="chip-stack" id="chip-stack-1"></div><div class="double-stack" id="double-stack-1"></div></div>
         <div class="bet-amount-label" id="bet-label-1"></div>
         <div class="seat-label">Seat 2</div>
       </div>
@@ -1247,7 +1254,7 @@ body[data-tab="play"] { padding-left: 0; padding-right: 0; }
         <div class="seat-cards" id="seat-cards-2"></div>
         <div class="seat-info" id="seat-info-2"></div>
         <div class="seat-result-badge" id="seat-result-2" style="visibility:hidden">&nbsp;</div>
-        <div class="bet-circle" id="bet-circle-2"><div class="chip-stack" id="chip-stack-2"></div></div>
+        <div class="bet-circle" id="bet-circle-2"><div class="chip-stack" id="chip-stack-2"></div><div class="double-stack" id="double-stack-2"></div></div>
         <div class="bet-amount-label" id="bet-label-2"></div>
         <div class="seat-label">Seat 3</div>
       </div>
@@ -1255,7 +1262,7 @@ body[data-tab="play"] { padding-left: 0; padding-right: 0; }
         <div class="seat-cards" id="seat-cards-3"></div>
         <div class="seat-info" id="seat-info-3"></div>
         <div class="seat-result-badge" id="seat-result-3" style="visibility:hidden">&nbsp;</div>
-        <div class="bet-circle" id="bet-circle-3"><div class="chip-stack" id="chip-stack-3"></div></div>
+        <div class="bet-circle" id="bet-circle-3"><div class="chip-stack" id="chip-stack-3"></div><div class="double-stack" id="double-stack-3"></div></div>
         <div class="bet-amount-label" id="bet-label-3"></div>
         <div class="seat-label">Seat 4</div>
       </div>
@@ -1263,7 +1270,7 @@ body[data-tab="play"] { padding-left: 0; padding-right: 0; }
         <div class="seat-cards" id="seat-cards-4"></div>
         <div class="seat-info" id="seat-info-4"></div>
         <div class="seat-result-badge" id="seat-result-4" style="visibility:hidden">&nbsp;</div>
-        <div class="bet-circle" id="bet-circle-4"><div class="chip-stack" id="chip-stack-4"></div></div>
+        <div class="bet-circle" id="bet-circle-4"><div class="chip-stack" id="chip-stack-4"></div><div class="double-stack" id="double-stack-4"></div></div>
         <div class="bet-amount-label" id="bet-label-4"></div>
         <div class="seat-label">Seat 5</div>
       </div>
@@ -2458,29 +2465,44 @@ function betToChips(amount) {
 }
 
 // ─── Chip rendering ──────────────────────────────────────────────────────────
-function renderBetCircle(idx) {
-  const seat  = pSeats[idx];
-  const stack = document.getElementById('chip-stack-' + idx);
-  const label = document.getElementById('bet-label-' + idx);
-  stack.innerHTML = '';
-  if (seat.bet === 0) { label.textContent = ''; return; }
-
-  const chips   = betToChips(seat.bet);
-  const visible = chips.slice(0, 6);
-  const circleH = 62; // match .bet-circle height
-  const chipH   = 42;
-  const baseBottom = Math.floor((circleH - chipH) / 2); // centre first chip
-
-  visible.forEach((val, i) => {
+function fillChipStack(container, amount, maxChips) {
+  container.innerHTML = '';
+  if (!amount) return;
+  const chips      = betToChips(amount).slice(0, maxChips || 6);
+  const circleH    = 62;
+  const chipH      = 42;
+  const baseBottom = Math.floor((circleH - chipH) / 2);
+  chips.forEach((val, i) => {
     const el = document.createElement('div');
-    el.className = 'bet-chip';
+    el.className    = 'bet-chip';
     el.style.background = CHIP_COLORS[val] || '#374151';
-    el.style.bottom     = (baseBottom + i * 8) + 'px';
-    el.style.zIndex     = i + 1;
-    el.textContent = '$' + val;
-    stack.appendChild(el);
+    el.style.bottom = (baseBottom + i * 8) + 'px';
+    el.style.zIndex = i + 1;
+    el.textContent  = '$' + val;
+    container.appendChild(el);
   });
-  label.textContent = '$' + seat.bet;
+}
+
+function renderBetCircle(idx) {
+  const seat   = pSeats[idx];
+  const stack  = document.getElementById('chip-stack-'   + idx);
+  const dStack = document.getElementById('double-stack-' + idx);
+  const label  = document.getElementById('bet-label-'    + idx);
+
+  if (seat.bet === 0) {
+    stack.innerHTML = ''; dStack.innerHTML = '';
+    label.textContent = ''; return;
+  }
+
+  fillChipStack(stack, seat.bet);
+
+  if (seat.extraBet > 0) {
+    fillChipStack(dStack, seat.extraBet);
+    label.textContent = `$${seat.bet + seat.extraBet}`;
+  } else {
+    dStack.innerHTML = '';
+    label.textContent = '$' + seat.bet;
+  }
 }
 
 function renderAllBetCircles() {
@@ -2855,6 +2877,7 @@ function playMultiAction(action) {
       seat.extraBet += seat.bet;
     }
     updatePlayBankrollUI();
+    renderBetCircle(pCurrentSeat);
     seat.firstAction = false;
     const c = dealPlayCard(); cards.push(c);
     appendAnimatedCardEl(getSeatCardContainer(pCurrentSeat, seat), c);
