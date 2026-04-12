@@ -529,17 +529,20 @@
 .tab-btn.active { background: rgba(255,255,255,0.18); color: #fff; }
 .tab-panel { display: none; width: 100%; }
 #tab-strategy.active { display: contents; }
-#tab-play.active, #tab-count.active { display: flex; flex-direction: column; align-items: center; }
+#tab-play.active  { display: flex; flex-direction: column; align-items: stretch; }
+#tab-count.active { display: flex; flex-direction: column; align-items: center; }
 
 /* ── Play Mode ───────────────────────────────────────────────────────── */
 .play-layout {
   display: flex;
-  gap: 20px;
-  align-items: flex-start;
+  flex-direction: column;
+  align-items: stretch;
   width: 100%;
-  max-width: 1120px;
 }
-.play-main { flex: 0 0 auto; width: 100%; max-width: 680px; display: flex; flex-direction: column; align-items: center; }
+.play-main { width: 100%; display: flex; flex-direction: column; align-items: center; }
+
+/* Body loses side padding in play mode so table goes edge-to-edge */
+body[data-tab="play"] { padding-left: 0; padding-right: 0; }
 
 .chip-tray {
   display: flex;
@@ -702,6 +705,15 @@
   overflow: visible;
 }
 
+/* During play: collapse inactive seats to just their bet circle */
+.seat.collapsed {
+  flex: 0 0 80px;
+}
+.seat.collapsed .seat-cards,
+.seat.collapsed .seat-info { display: none; }
+/* Active playing seat expands to fill remaining space */
+.seat.playing { flex: 1 1 auto; }
+
 .seat-info {
   font-size: 0.62rem;
   color: #fde68a;
@@ -836,9 +848,52 @@
 }
 
 .winnings-panel {
-  flex: 1; min-width: 220px;
-  background: rgba(0,0,0,0.25); border-radius: 16px;
-  padding: 16px 14px; position: sticky; top: 24px;
+  position: fixed;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%) translateX(calc(100% - 36px));
+  z-index: 300;
+  width: 280px;
+  background: rgba(6,16,10,0.97);
+  border: 1px solid rgba(255,255,255,0.13);
+  border-right: none;
+  border-radius: 14px 0 0 14px;
+  box-shadow: -6px 0 32px rgba(0,0,0,0.65);
+  transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+  display: none;
+  flex-direction: row;
+}
+.winnings-panel.visible { display: flex; }
+.winnings-panel.open { transform: translateY(-50%) translateX(0); }
+
+.winnings-handle {
+  width: 36px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 14px 0 0 14px;
+  background: rgba(255,255,255,0.04);
+  border-right: 1px solid rgba(255,255,255,0.08);
+}
+.winnings-handle span {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #fbbf24;
+  white-space: nowrap;
+  opacity: 0.9;
+}
+.winnings-content {
+  flex: 1;
+  padding: 16px 14px;
+  min-width: 0;
+  overflow-y: auto;
+  max-height: 80vh;
 }
 .winnings-title {
   font-size: 0.88rem; font-weight: 700; letter-spacing: 0.5px;
@@ -858,10 +913,6 @@
 .w-neg { color: #f87171; }
 .w-neu { color: #fbbf24; }
 
-@media (max-width: 860px) {
-  .play-layout { flex-direction: column; align-items: center; }
-  .winnings-panel { max-width: 680px; width: 100%; position: static; }
-}
 
 /* ── Card Counting Tab ───────────────────────────────────────────────── */
 .count-main {
@@ -1226,17 +1277,20 @@
 
 </div><!-- end .play-main -->
 
-<div class="winnings-panel">
-  <div class="winnings-title" onclick="toggleWinnings()">Session Stats ▼</div>
-  <div class="winnings-body" id="winningsBody">
-    <div class="winnings-row"><span>Hands Played</span><span id="wHandsPlayed">0</span></div>
-    <div class="winnings-row"><span>Wins</span><span id="wWins" class="w-pos">0</span></div>
-    <div class="winnings-row"><span>Losses</span><span id="wLosses" class="w-neg">0</span></div>
-    <div class="winnings-row"><span>Pushes</span><span id="wPushes" class="w-neu">0</span></div>
-    <div class="winnings-row"><span>Blackjacks</span><span id="wBJs" class="w-pos">0</span></div>
-    <div class="winnings-row"><span>Biggest Win</span><span id="wBigWin" class="w-pos">$0</span></div>
-    <div class="winnings-row"><span>Biggest Loss</span><span id="wBigLoss" class="w-neg">$0</span></div>
-    <button class="btn-reset" onclick="resetPlaySession()" style="margin-top:12px">Reset Session</button>
+<div class="winnings-panel" id="winningsPanel">
+  <div class="winnings-handle" onclick="toggleWinnings()"><span>Stats</span></div>
+  <div class="winnings-content">
+    <div class="winnings-title">Session Stats</div>
+    <div class="winnings-body" id="winningsBody">
+      <div class="winnings-row"><span>Hands Played</span><span id="wHandsPlayed">0</span></div>
+      <div class="winnings-row"><span>Wins</span><span id="wWins" class="w-pos">0</span></div>
+      <div class="winnings-row"><span>Losses</span><span id="wLosses" class="w-neg">0</span></div>
+      <div class="winnings-row"><span>Pushes</span><span id="wPushes" class="w-neu">0</span></div>
+      <div class="winnings-row"><span>Blackjacks</span><span id="wBJs" class="w-pos">0</span></div>
+      <div class="winnings-row"><span>Biggest Win</span><span id="wBigWin" class="w-pos">$0</span></div>
+      <div class="winnings-row"><span>Biggest Loss</span><span id="wBigLoss" class="w-neg">$0</span></div>
+      <button class="btn-reset" onclick="resetPlaySession()" style="margin-top:12px">Reset Session</button>
+    </div>
   </div>
 </div>
 
@@ -2277,6 +2331,9 @@ function switchTab(name) {
     const id = 'tabBtn' + t.charAt(0).toUpperCase() + t.slice(1);
     document.getElementById(id).classList.toggle('active', t === name);
   });
+  document.body.dataset.tab = name;
+  const wp = document.getElementById('winningsPanel');
+  if (wp) wp.classList.toggle('visible', name === 'play');
   if (name === 'play' && !playInitialized) initPlay();
   if (name === 'count' && !countShoe.length) { buildCountShoe(); resetCountRound(); }
 }
@@ -2400,9 +2457,10 @@ function selectSeat(idx) {
 function updateSeatHighlights() {
   for (let i = 0; i < NUM_SEATS; i++) {
     const el = document.getElementById('seat-' + i);
-    el.classList.remove('selected', 'playing');
+    el.classList.remove('selected', 'playing', 'collapsed');
     if (pPlayPhase === 'bet'  && i === pSelectedSeat) el.classList.add('selected');
     if (pPlayPhase === 'play' && i === pCurrentSeat)  el.classList.add('playing');
+    if (pPlayPhase === 'play' && i !== pCurrentSeat)  el.classList.add('collapsed');
   }
 }
 
@@ -2926,11 +2984,7 @@ function recordPlayResult(netProfit, resultType) {
 }
 
 function toggleWinnings() {
-  const body  = document.getElementById('winningsBody');
-  const title = document.querySelector('.winnings-title');
-  const open  = body.style.display !== 'none';
-  body.style.display = open ? 'none' : '';
-  title.textContent  = (open ? '▶' : '▼') + ' Session Stats';
+  document.getElementById('winningsPanel').classList.toggle('open');
 }
 
 // ─── Play-mode rule controls ──────────────────────────────────────────────────
