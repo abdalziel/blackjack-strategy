@@ -853,6 +853,100 @@ body[data-tab="play"] { padding-left: 0; padding-right: 0; }
   letter-spacing: 0.5px;
 }
 
+/* Cut card — shown beside dealer when 75% mark passes */
+.dealer-hand-and-cut {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.cut-card {
+  width: 38px;
+  height: 54px;
+  border-radius: 6px;
+  background: #dc2626;
+  border: 2px solid #991b1b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 1px 2px 6px rgba(0,0,0,0.5);
+  flex-shrink: 0;
+}
+.cut-card-label {
+  color: rgba(255,255,255,0.9);
+  font-size: 0.45rem;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+
+/* Shuffle overlay */
+.shuffle-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgba(0,0,0,0.72);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  pointer-events: none;
+}
+@keyframes shuffle-fade {
+  0%   { opacity: 0; }
+  12%  { opacity: 1; }
+  80%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes shuffle-bob {
+  0%   { transform: scale(0.85) rotate(-4deg); opacity: 0; }
+  20%  { transform: scale(1.06) rotate(3deg);  opacity: 1; }
+  40%  { transform: scale(1)    rotate(-3deg); }
+  58%  { transform: scale(1)    rotate(2deg);  }
+  74%  { transform: scale(1)    rotate(-1deg); }
+  88%  { transform: scale(1)    rotate(0deg);  opacity: 1; }
+  100% { transform: scale(0.92);               opacity: 0; }
+}
+.shuffle-overlay.active { animation: shuffle-fade 2s ease forwards; }
+.shuffle-overlay.active .shuffle-text { animation: shuffle-bob 2s ease forwards; }
+.shuffle-text {
+  color: #fbbf24;
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.6);
+}
+.shuffle-sub {
+  color: rgba(255,255,255,0.55);
+  font-size: 0.72rem;
+  margin-top: 6px;
+  letter-spacing: 1px;
+}
+
+/* Reset shoe button — bottom-right of table */
+.reset-shoe-btn {
+  position: absolute;
+  bottom: 10px;
+  right: 14px;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(255,255,255,0.18);
+  color: rgba(255,255,255,0.65);
+  font-size: 0.62rem;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  transition: background 0.15s, color 0.15s;
+  z-index: 10;
+}
+.reset-shoe-btn:hover:not(:disabled) { background: rgba(0,0,0,0.55); color: #fff; }
+.reset-shoe-btn:disabled { opacity: 0.25; cursor: not-allowed; }
+
 /* Action panel */
 .play-action-panel {
   background: rgba(0,0,0,0.18);
@@ -1262,11 +1356,25 @@ body[data-tab="play"] { padding-left: 0; padding-right: 0; }
   <!-- Blackjack table -->
   <div class="bj-table">
 
+    <!-- Shuffle overlay -->
+    <div id="shuffleOverlay" class="shuffle-overlay" style="display:none">
+      <div class="shuffle-text">Shuffling Deck</div>
+      <div class="shuffle-sub">New shoe in play</div>
+    </div>
+
+    <!-- Reset shoe button -->
+    <button id="btnResetShoe" class="reset-shoe-btn" onclick="manualResetShoe()" disabled>&#8635; Reset Shoe</button>
+
     <!-- Dealer zone -->
     <div class="dealer-zone">
       <div class="dealer-label-txt">Dealer</div>
       <div class="dealer-total-txt" id="playDealerTotal"></div>
-      <div class="dealer-hand-row" id="playDealerHand"></div>
+      <div class="dealer-hand-and-cut">
+        <div class="dealer-hand-row" id="playDealerHand"></div>
+        <div id="cutCard" class="cut-card" style="display:none">
+          <span class="cut-card-label">Shuffle</span>
+        </div>
+      </div>
     </div>
 
     <div class="table-rule-text">Blackjack Pays 3 to 2</div>
@@ -2442,9 +2550,10 @@ let playH17Enabled       = false;
 let playDeckCount        = 6;
 
 // Play-mode dedicated shoe
-let playShoe       = [];
-let playShoeIndex  = 0;
+let playShoe           = [];
+let playShoeIndex      = 0;
 let playNeedsReshuffle = false;
+let playCutCardShown   = false;
 
 function buildPlayShoe() {
   playShoe = [];
@@ -2459,14 +2568,64 @@ function buildPlayShoe() {
     const j = Math.floor(Math.random() * (i + 1));
     [playShoe[i], playShoe[j]] = [playShoe[j], playShoe[i]];
   }
-  playShoeIndex = 0;
+  playShoeIndex      = 0;
   playNeedsReshuffle = false;
+  playCutCardShown   = false;
+  hideCutCard();
+  updateResetShoeBtn();
 }
 
 function dealPlayCard() {
-  if (playShoeIndex >= Math.floor(playShoe.length * 0.75)) playNeedsReshuffle = true;
-  if (playShoeIndex >= playShoe.length) { buildPlayShoe(); }
-  return playShoe[playShoeIndex++];
+  if (playShoeIndex >= playShoe.length) buildPlayShoe(); // safety fallback
+  const card = playShoe[playShoeIndex++];
+  const pct  = playShoeIndex / playShoe.length;
+  if (pct >= 0.75 && !playCutCardShown) {
+    playCutCardShown   = true;
+    playNeedsReshuffle = true;
+    showCutCard();
+  }
+  if (pct >= 0.5) updateResetShoeBtn();
+  return card;
+}
+
+function showCutCard() {
+  const el = document.getElementById('cutCard');
+  if (!el) return;
+  el.style.display = 'flex';
+  el.classList.add('card-dealing');
+}
+function hideCutCard() {
+  const el = document.getElementById('cutCard');
+  if (el) { el.style.display = 'none'; el.classList.remove('card-dealing'); }
+}
+
+function updateResetShoeBtn() {
+  const btn = document.getElementById('btnResetShoe');
+  if (!btn) return;
+  const pct = playShoe.length ? playShoeIndex / playShoe.length : 0;
+  btn.disabled = pct < 0.5 || !['bet', 'done'].includes(pPlayPhase);
+}
+
+function showShuffleAnimation(callback) {
+  const el = document.getElementById('shuffleOverlay');
+  if (!el) { if (callback) callback(); return; }
+  el.style.display = 'flex';
+  el.classList.remove('active');
+  void el.offsetWidth; // force reflow to restart animation
+  el.classList.add('active');
+  setTimeout(() => {
+    el.style.display = 'none';
+    el.classList.remove('active');
+    if (callback) callback();
+  }, 2000);
+}
+
+function manualResetShoe() {
+  if (!['bet', 'done'].includes(pPlayPhase)) return;
+  document.getElementById('btnResetShoe').disabled = true;
+  showShuffleAnimation(() => {
+    buildPlayShoe();
+  });
 }
 
 let playStats = {
@@ -2676,8 +2835,19 @@ function startMultiHand() {
   const activeSeats = pSeats.map((s, i) => i).filter(i => pSeats[i].bet > 0);
   if (!activeSeats.length) return;
   pActiveSeats = activeSeats;
-  if (playNeedsReshuffle) buildPlayShoe();
 
+  if (playNeedsReshuffle) {
+    document.getElementById('btnDealPlay').disabled = true;
+    showShuffleAnimation(() => {
+      buildPlayShoe();
+      dealNewHand(activeSeats);
+    });
+    return;
+  }
+  dealNewHand(activeSeats);
+}
+
+function dealNewHand(activeSeats) {
   // Save bets and deduct from bankroll
   pLastBets = pSeats.map(s => s.bet);
   playBankroll -= totalBets();
@@ -3131,6 +3301,7 @@ function finishHand() {
   updatePlayBankrollUI();
   renderAllBetCircles();
   document.getElementById('btnPlayNext').style.display = 'block';
+  updateResetShoeBtn();
   savePlayState();
   if (playBankroll <= 0) {
     playBankroll = 500; playStats.startBankroll = 500;
@@ -3143,6 +3314,7 @@ function finishHand() {
 function prepareNextHand() {
   pPlayPhase = 'bet';
   pCurrentSeat = -1;
+  updateResetShoeBtn();
   pDealerCards = [];
   pSeats.forEach(s => {
     s.cards = []; s.splitHands = []; s.splitIdx = 0;
