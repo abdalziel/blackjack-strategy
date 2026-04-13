@@ -2845,6 +2845,19 @@ function advanceToNextSeat() {
 
   updateSeatHighlights();
   document.getElementById('playingSeatLabel').textContent = `Seat ${next + 1} — your turn`;
+  showActionsOrAutoStand();
+}
+
+// Auto-stand on hard 17+; otherwise show action buttons
+function showActionsOrAutoStand() {
+  const seat  = pSeats[pCurrentSeat];
+  const cards = seat.inSplit ? seat.splitHands[seat.splitIdx] : seat.cards;
+  const total = handTotal(cards);
+  const soft  = isSoft(cards) && total <= 21;
+  if (total >= 17 && !soft) {
+    setTimeout(finishCurrentSeat, 350);
+    return;
+  }
   showMultiActions();
 }
 
@@ -2862,7 +2875,7 @@ function playMultiAction(action) {
     appendAnimatedCardEl(getSeatCardContainer(pCurrentSeat, seat), c);
     updateSeatInfo(pCurrentSeat);
     if (handTotal(cards) >= 21) { setTimeout(finishCurrentSeat, 450); }
-    else { showMultiActions(); }
+    else { showActionsOrAutoStand(); }
     return;
   }
 
@@ -2900,7 +2913,7 @@ function playMultiAction(action) {
     seat.firstAction = true;
     renderSplitSeat(pCurrentSeat);
     updateSeatInfo(pCurrentSeat);
-    showMultiActions();
+    showActionsOrAutoStand();
     return;
   }
 
@@ -2924,7 +2937,7 @@ function finishCurrentSeat() {
     seat.firstAction = true;
     renderSplitSeat(pCurrentSeat);
     updateSeatInfo(pCurrentSeat);
-    showMultiActions();
+    showActionsOrAutoStand();
     return;
   }
   seat.result = 'pending'; // will be settled after dealer plays
@@ -2935,12 +2948,23 @@ function finishCurrentSeat() {
 function startDealerPlay() {
   pPlayPhase = 'dealer';
   updateSeatHighlights();
-  document.getElementById('playingSeatLabel').textContent = 'Dealer playing…';
   flipHoleCard();
+  updatePlayDealerTotal(true);
 
-  // Check if any active seat still needs dealer comparison
-  const needsDealer = pSeats.some((s, i) => s.bet > 0 && s.result === 'pending');
-  if (!needsDealer) { settleAllSeats(); return; }
+  // Only draw if at least one non-busted player hand needs the comparison
+  const anyStanding = pSeats.some(s => {
+    if (!s.bet || s.result !== 'pending') return false;
+    if (s.inSplit) return s.splitHands.some(h => handTotal(h) <= 21);
+    return handTotal(s.cards) <= 21;
+  });
+
+  if (!anyStanding) {
+    document.getElementById('playingSeatLabel').textContent = '';
+    settleAllSeats();
+    return;
+  }
+
+  document.getElementById('playingSeatLabel').textContent = 'Dealer playing…';
 
   function hitStep() {
     const total = handTotal(pDealerCards);
@@ -2956,7 +2980,6 @@ function startDealerPlay() {
       settleAllSeats();
     }
   }
-  updatePlayDealerTotal(true);
   hitStep();
 }
 
