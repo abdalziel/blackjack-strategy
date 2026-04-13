@@ -717,6 +717,45 @@ body[data-tab="play"] { padding-left: 0; padding-right: 0; }
   overflow: visible;
 }
 
+/* Split sub-hand containers */
+.split-sub {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 6px;
+  padding: 4px 4px 6px;
+  margin: 0 3px;
+}
+.split-cards-wrap {
+  display: flex;
+  gap: 3px;
+  flex-wrap: nowrap;
+}
+/* Mini chip stack inside each split hand */
+.split-chip-stack {
+  position: relative;
+  width: 34px;
+  height: 38px;
+  flex-shrink: 0;
+}
+.split-chip {
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 2px dashed rgba(255,255,255,0.55);
+  font-size: 0.44rem;
+  font-weight: 800;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.45);
+  left: 0;
+}
+
 /* During play: collapse inactive seats to just their bet circle */
 .seat.collapsed {
   flex: 0 0 80px;
@@ -2484,10 +2523,19 @@ function fillChipStack(container, amount, maxChips) {
 }
 
 function renderBetCircle(idx) {
-  const seat   = pSeats[idx];
-  const stack  = document.getElementById('chip-stack-'   + idx);
-  const dStack = document.getElementById('double-stack-' + idx);
-  const label  = document.getElementById('bet-label-'    + idx);
+  const seat    = pSeats[idx];
+  const circle  = document.getElementById('bet-circle-'   + idx);
+  const stack   = document.getElementById('chip-stack-'   + idx);
+  const dStack  = document.getElementById('double-stack-' + idx);
+  const label   = document.getElementById('bet-label-'    + idx);
+
+  // During split, chips live in each split-sub; hide the main circle
+  if (seat.inSplit) {
+    circle.style.visibility = 'hidden';
+    label.textContent = '';
+    return;
+  }
+  circle.style.visibility = '';
 
   if (seat.bet === 0) {
     stack.innerHTML = ''; dStack.innerHTML = '';
@@ -2886,11 +2934,12 @@ function playMultiAction(action) {
     playBankroll -= seat.bet;
     if (seat.inSplit) {
       seat.splitExtraBets[seat.splitIdx] = (seat.splitExtraBets[seat.splitIdx] || 0) + seat.bet;
+      updateSplitChipStack(pCurrentSeat, seat.splitIdx);
     } else {
       seat.extraBet += seat.bet;
+      renderBetCircle(pCurrentSeat);
     }
     updatePlayBankrollUI();
-    renderBetCircle(pCurrentSeat);
     seat.firstAction = false;
     const c = dealPlayCard(); cards.push(c);
     appendAnimatedCardEl(getSeatCardContainer(pCurrentSeat, seat), c);
@@ -3128,17 +3177,56 @@ function getSeatCardContainer(idx, seat) {
   return subs[seat.splitIdx] || el;
 }
 
+function makeSplitChipStack(amount) {
+  const wrap = document.createElement('div');
+  wrap.className = 'split-chip-stack';
+  betToChips(amount).slice(0, 4).forEach((val, i) => {
+    const el = document.createElement('div');
+    el.className = 'split-chip';
+    el.style.background = CHIP_COLORS[val] || '#374151';
+    el.style.bottom = (2 + i * 6) + 'px';
+    el.style.zIndex = i + 1;
+    el.textContent = '$' + val;
+    wrap.appendChild(el);
+  });
+  return wrap;
+}
+
+function updateSplitChipStack(seatIdx, handIdx) {
+  const seat = pSeats[seatIdx];
+  const subs = document.getElementById('seat-cards-' + seatIdx).querySelectorAll('.split-sub');
+  const sub  = subs[handIdx];
+  if (!sub) return;
+  const old = sub.querySelector('.split-chip-stack');
+  const handBet = seat.bet + (seat.splitExtraBets[handIdx] || 0);
+  const fresh = makeSplitChipStack(handBet);
+  if (old) sub.replaceChild(fresh, old); else sub.appendChild(fresh);
+}
+
 function renderSplitSeat(idx) {
   const seat = pSeats[idx];
   const el   = document.getElementById('seat-cards-' + idx);
   el.innerHTML = '';
+
+  // Hide main bet circle — chips now live in each split-sub
+  document.getElementById('bet-circle-' + idx).style.visibility = 'hidden';
+  document.getElementById('bet-label-'   + idx).textContent = '';
+
   seat.splitHands.forEach((hand, hi) => {
     const sub = document.createElement('div');
     sub.className = 'split-sub';
-    sub.style.cssText = `display:inline-flex;flex-wrap:wrap;gap:2px;border:1px solid ${
-      hi === seat.splitIdx ? '#fbbf24' : 'rgba(255,255,255,0.2)'
-    };border-radius:4px;padding:2px;margin:0 2px;`;
-    hand.forEach(c => sub.appendChild(makeCardEl(c)));
+    sub.style.borderColor = hi === seat.splitIdx ? '#fbbf24' : 'rgba(255,255,255,0.2)';
+
+    // Card row
+    const cardsWrap = document.createElement('div');
+    cardsWrap.className = 'split-cards-wrap';
+    hand.forEach(c => cardsWrap.appendChild(makeCardEl(c)));
+    sub.appendChild(cardsWrap);
+
+    // Chip stack for this hand
+    const handBet = seat.bet + (seat.splitExtraBets[hi] || 0);
+    sub.appendChild(makeSplitChipStack(handBet));
+
     el.appendChild(sub);
   });
 }
