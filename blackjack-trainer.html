@@ -1100,15 +1100,50 @@ body[data-tab="play"] { padding-left: 0; padding-right: 0; }
   border-radius: 8px; color: #fff; padding: 6px 12px; font-size: 0.9rem; cursor: pointer;
 }
 .count-deal-area {
-  display: flex; flex-wrap: wrap; gap: 10px;
-  min-height: 120px; align-items: center; justify-content: center;
-  margin-bottom: 20px; width: 100%;
+  position: relative;
+  min-height: 120px;
+  margin-bottom: 8px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
+.count-deal-area:not(.expanded) .card {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+.count-deal-area.expanded {
+  flex-wrap: wrap;
+  gap: 10px;
+  min-height: 120px;
+}
+.count-deal-area.expanded .card {
+  position: static;
+  transform: none;
+}
+.count-expand-row {
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 14px;
+}
+.btn-count-expand {
+  background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 8px; color: rgba(255,255,255,0.7); font-size: 0.78rem;
+  font-weight: 600; padding: 5px 14px; cursor: pointer;
+  transition: background 0.15s, color 0.15s; letter-spacing: 0.3px;
+}
+.btn-count-expand:hover { background: rgba(0,0,0,0.4); color: #fff; }
 @keyframes cardDeal {
   from { opacity: 0; transform: translateY(-30px) rotate(-5deg); }
   to   { opacity: 1; transform: translateY(0) rotate(0deg); }
 }
+@keyframes cardDealStack {
+  from { opacity: 0; transform: translate(-50%, -70%) rotate(-5deg); }
+  to   { opacity: 1; transform: translate(-50%, -50%) rotate(0deg); }
+}
 .card-dealing { animation: cardDeal 0.35s ease-out forwards; }
+.count-deal-area:not(.expanded) .card-dealing { animation: cardDealStack 0.35s ease-out forwards; }
 
 @keyframes cardFlip {
   from { transform: rotateY(90deg) scaleX(0.6); opacity: 0.4; }
@@ -1510,6 +1545,17 @@ body[data-tab="play"] { padding-left: 0; padding-right: 0; }
       <option value="6" selected>6</option>
       <option value="8">8</option>
     </select>
+    <label for="countDealSpeed">Deal Speed:</label>
+    <select id="countDealSpeed">
+      <option value="250">0.25s</option>
+      <option value="500">0.50s</option>
+      <option value="750" selected>0.75s</option>
+      <option value="1000">1.00s</option>
+      <option value="1250">1.25s</option>
+      <option value="1500">1.50s</option>
+      <option value="1750">1.75s</option>
+      <option value="2000">2.00s</option>
+    </select>
   </div>
 
   <div class="hilo-ref">
@@ -1536,6 +1582,9 @@ body[data-tab="play"] { padding-left: 0; padding-right: 0; }
   <div class="table-area" style="width:100%">
     <div class="count-status" id="countStatus">Press Start to begin a round</div>
     <div class="count-deal-area" id="countDealArea"></div>
+    <div class="count-expand-row" id="countExpandRow" style="display:none">
+      <button class="btn-count-expand" id="btnCountExpand" onclick="toggleCountExpand()">▼ Expand Cards</button>
+    </div>
     <div class="count-input-area" id="countInputArea" style="display:none">
       <input type="number" class="count-input" id="countGuess" placeholder="0"
         onkeydown="if(event.key==='Enter') submitCount()" />
@@ -2886,7 +2935,7 @@ function dealNewHand(activeSeats) {
   updateBetControls();
 
   // Animate deal: seat0-card1, seat1-card1, …, D-hole, seat0-card2, seat1-card2, …, D-upcard
-  const D = 240;
+  const D = 700;
   let t = 0;
   activeSeats.forEach(i => {
     setTimeout(() => appendAnimatedCardEl(document.getElementById('seat-cards-' + i), pSeats[i].cards[0]), t);
@@ -3596,7 +3645,11 @@ function resetCountRound() {
   clearTimeout(countDealTimer);
   countRoundActive = false;
   countRunning = 0;
-  document.getElementById('countDealArea').innerHTML = '';
+  const dealArea = document.getElementById('countDealArea');
+  dealArea.innerHTML = '';
+  dealArea.classList.remove('expanded');
+  document.getElementById('countExpandRow').style.display  = 'none';
+  document.getElementById('btnCountExpand').textContent    = '▼ Expand Cards';
   document.getElementById('countInputArea').style.display  = 'none';
   document.getElementById('countFeedback').style.display   = 'none';
   document.getElementById('btnCountStart').style.display   = 'block';
@@ -3604,6 +3657,13 @@ function resetCountRound() {
   document.getElementById('countGuess').value = '';
   document.getElementById('countStatus').textContent = 'Press Start to begin a round';
   document.getElementById('btnSubmitCount').disabled = true;
+}
+
+function toggleCountExpand() {
+  const dealArea = document.getElementById('countDealArea');
+  const btn = document.getElementById('btnCountExpand');
+  const expanded = dealArea.classList.toggle('expanded');
+  btn.textContent = expanded ? '▲ Collapse Cards' : '▼ Expand Cards';
 }
 
 function startCountRound() {
@@ -3614,12 +3674,18 @@ function startCountRound() {
   countRoundActive = true;
   countRunning = 0;
 
-  document.getElementById('countDealArea').innerHTML = '';
+  const dealArea = document.getElementById('countDealArea');
+  dealArea.innerHTML = '';
+  dealArea.classList.remove('expanded');
+  document.getElementById('countExpandRow').style.display = 'none';
+  document.getElementById('btnCountExpand').textContent = '▼ Expand Cards';
   document.getElementById('countFeedback').style.display = 'none';
   document.getElementById('btnCountStart').style.display = 'none';
   document.getElementById('btnCountNext').style.display  = 'none';
   document.getElementById('countInputArea').style.display = 'none';
   document.getElementById('btnSubmitCount').disabled = true;
+
+  const dealDelay = parseInt(document.getElementById('countDealSpeed').value) || 750;
 
   let i = 0;
   function dealNext() {
@@ -3627,6 +3693,7 @@ function startCountRound() {
       document.getElementById('countStatus').textContent =
         `What is the running count after ${numCards} cards?`;
       document.getElementById('countInputArea').style.display = 'flex';
+      document.getElementById('countExpandRow').style.display = 'flex';
       document.getElementById('btnSubmitCount').disabled = false;
       document.getElementById('countGuess').focus();
       return;
@@ -3636,13 +3703,13 @@ function startCountRound() {
 
     const el = makeCardEl(card);
     el.classList.add('card-dealing');
-    document.getElementById('countDealArea').appendChild(el);
+    dealArea.appendChild(el);
 
     document.getElementById('countStatus').textContent =
       `Dealing card ${i + 1} of ${numCards}…`;
 
     i++;
-    countDealTimer = setTimeout(dealNext, 700);
+    countDealTimer = setTimeout(dealNext, dealDelay);
   }
   dealNext();
 }
