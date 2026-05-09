@@ -1035,6 +1035,40 @@ body[data-tab="play"] { padding-left: 0; padding-right: 0; }
   width: 14px; height: 14px; cursor: pointer; accent-color: #fbbf24;
 }
 
+.coach-bar {
+  width: 100%; max-width: 680px;
+  display: flex; align-items: center; gap: 10px;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(251,191,36,0.3);
+  border-radius: 10px;
+  padding: 8px 14px;
+  margin-bottom: 10px;
+  font-size: 0.82rem;
+}
+.coach-bar-label { opacity: 0.6; text-transform: uppercase; letter-spacing: 1px; font-size: 0.7rem; }
+.coach-count-val {
+  font-weight: 700; font-size: 1rem; min-width: 28px; text-align: center;
+  background: rgba(0,0,0,0.25); border-radius: 6px; padding: 2px 6px;
+}
+.coach-count-val.pos { color: #6ee87a; }
+.coach-count-val.neg { color: #f87171; }
+.coach-count-val.neu { color: #d1d5db; }
+.coach-count-sep { opacity: 0.3; margin: 0 2px; }
+.coach-hint {
+  width: 100%; max-width: 680px;
+  background: rgba(251,191,36,0.12);
+  border: 1px solid rgba(251,191,36,0.35);
+  border-radius: 10px;
+  padding: 9px 14px;
+  margin-bottom: 8px;
+  font-size: 0.85rem;
+  text-align: center;
+  display: none;
+}
+.coach-hint-label { opacity: 0.65; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
+.coach-hint-action { font-weight: 700; font-size: 1.05rem; color: #fbbf24; }
+.coach-hint-dev { font-size: 0.75rem; opacity: 0.75; margin-top: 2px; }
+
 .winnings-panel {
   position: fixed;
   right: 0;
@@ -1403,6 +1437,14 @@ body[data-tab="play"] { padding-left: 0; padding-right: 0; }
       <button class="deck-btn active" data-play-decks="6" onclick="setPlayDeckCount(6)">6</button>
       <button class="deck-btn" data-play-decks="8"  onclick="setPlayDeckCount(8)">8</button>
     </div>
+    <div class="play-rules-row">
+      <label class="play-rule-toggle">
+        <input type="checkbox" id="playCoachToggle" onchange="togglePlayCoach()" />
+        <span>Coach Mode</span>
+        <span class="das-badge off" id="playCoachBadge">OFF</span>
+      </label>
+      <span style="opacity:0.45;font-size:0.75rem">Tracks count &amp; shows book hint</span>
+    </div>
   </div>
 
   <div class="bankroll-bar">
@@ -1524,6 +1566,20 @@ body[data-tab="play"] { padding-left: 0; padding-right: 0; }
         <button class="tray-btn deal-btn" id="insuranceBtn1"></button>
         <button class="tray-btn" id="insuranceBtn2"></button>
       </div>
+    </div>
+
+    <div class="coach-bar" id="playCoachBar" style="display:none">
+      <span class="coach-bar-label">RC</span>
+      <span class="coach-count-val neu" id="playCoachRC">0</span>
+      <span class="coach-count-sep">|</span>
+      <span class="coach-bar-label">TC</span>
+      <span class="coach-count-val neu" id="playCoachTC">0</span>
+    </div>
+
+    <div class="coach-hint" id="playCoachHint">
+      <div class="coach-hint-label">Book says</div>
+      <div class="coach-hint-action" id="playCoachAction"></div>
+      <div class="coach-hint-dev" id="playCoachDev"></div>
     </div>
 
     <button class="btn-next" id="btnPlayNext" style="display:none" onclick="prepareNextHand()">Next Hand &rarr;</button>
@@ -2780,6 +2836,8 @@ let playShoe           = [];
 let playShoeIndex      = 0;
 let playNeedsReshuffle = false;
 let playCutCardShown   = false;
+let playCoachMode      = false;
+let playRunningCount   = 0;
 
 function buildPlayShoe() {
   playShoe = [];
@@ -2797,11 +2855,12 @@ function buildPlayShoe() {
   playShoeIndex      = 0;
   playNeedsReshuffle = false;
   playCutCardShown   = false;
+  playRunningCount   = 0;
   hideCutCard();
   updateResetShoeBtn();
 }
 
-function dealPlayCard() {
+function dealPlayCard(count = true) {
   if (playShoeIndex >= playShoe.length) buildPlayShoe(); // safety fallback
   const card = playShoe[playShoeIndex++];
   const pct  = playShoeIndex / playShoe.length;
@@ -2811,6 +2870,7 @@ function dealPlayCard() {
     showCutCard();
   }
   if (pct >= 0.5) updateResetShoeBtn();
+  if (count) playRunningCount += hiloValue(card.rank);
   return card;
 }
 
@@ -2852,6 +2912,91 @@ function manualResetShoe() {
   showShuffleAnimation(() => {
     buildPlayShoe();
   });
+}
+
+// ─── Coach Mode ───────────────────────────────────────────────────────────────
+function getPlayTrueCount() {
+  const decksLeft = Math.max(0.5, (playShoe.length - playShoeIndex) / 52);
+  return Math.round(playRunningCount / decksLeft);
+}
+
+function getPlayCoachHint(cards, dealerRank) {
+  // Temporarily swap strategy globals to play-mode settings
+  const _das  = dasEnabled, _surr = surrenderEnabled;
+  const _h17  = h17Enabled, _dk   = deckCount;
+  const _rc   = runningCount, _sh  = shoe, _si  = shoeIndex;
+  dasEnabled       = playDasEnabled;
+  surrenderEnabled = playSurrenderEnabled;
+  h17Enabled       = playH17Enabled;
+  deckCount        = playDeckCount;
+  runningCount     = playRunningCount;
+  shoe             = playShoe;
+  shoeIndex        = playShoeIndex;
+
+  const basic  = basicStrategy(cards, dealerRank);
+  const dev    = getDeviation(cards, dealerRank);
+  const action = dev ? dev.devAction : basic;
+
+  // Restore
+  dasEnabled = _das; surrenderEnabled = _surr;
+  h17Enabled = _h17; deckCount = _dk;
+  runningCount = _rc; shoe = _sh; shoeIndex = _si;
+
+  const labels = { H:'Hit', S:'Stand', D:'Double Down', P:'Split', R:'Surrender' };
+  return { action, label: labels[action] || action, deviation: dev || null };
+}
+
+function updatePlayCoachDisplay() {
+  const bar  = document.getElementById('playCoachBar');
+  const hint = document.getElementById('playCoachHint');
+  if (!playCoachMode) { bar.style.display = 'none'; hint.style.display = 'none'; return; }
+
+  // Always show the count bar
+  bar.style.display = 'flex';
+  const rc = playRunningCount;
+  const tc = getPlayTrueCount();
+  const rcEl = document.getElementById('playCoachRC');
+  const tcEl = document.getElementById('playCoachTC');
+  rcEl.textContent = rc > 0 ? '+' + rc : rc;
+  tcEl.textContent = tc > 0 ? '+' + tc : tc;
+  const cls = v => v > 0 ? 'coach-count-val pos' : v < 0 ? 'coach-count-val neg' : 'coach-count-val neu';
+  rcEl.className = cls(rc);
+  tcEl.className = cls(tc);
+
+  // Show hint only when player is acting on a hand
+  if (pPlayPhase !== 'play' || pCurrentSeat === -1) { hint.style.display = 'none'; return; }
+  const seat  = pSeats[pCurrentSeat];
+  const cards = seat.inSplit ? seat.splitHands[seat.splitIdx] : seat.cards;
+  if (!cards || cards.length < 2) { hint.style.display = 'none'; return; }
+  const dealerRank = pDealerCards[1] ? pDealerCards[1].rank : null;
+  if (!dealerRank) { hint.style.display = 'none'; return; }
+
+  const h = getPlayCoachHint(cards, dealerRank);
+  hint.style.display = 'block';
+  document.getElementById('playCoachAction').textContent = h.label;
+  const devEl = document.getElementById('playCoachDev');
+  if (h.deviation) {
+    devEl.textContent = `${h.deviation.source}: ${h.deviation.label} @ TC ${h.deviation.dir === 'gte' ? '≥' : '<'} ${h.deviation.index}`;
+  } else {
+    devEl.textContent = '';
+  }
+}
+
+function togglePlayCoach() {
+  playCoachMode = document.getElementById('playCoachToggle').checked;
+  const badge = document.getElementById('playCoachBadge');
+  badge.textContent = playCoachMode ? 'ON' : 'OFF';
+  badge.className   = playCoachMode ? 'das-badge on' : 'das-badge off';
+  updatePlayCoachDisplay();
+  savePlayState();
+}
+
+function getPlayInsuranceAdvice() {
+  if (!playCoachMode) return '';
+  const tc = getPlayTrueCount();
+  return tc >= 3
+    ? ` (TC ${tc > 0 ? '+' : ''}${tc} — book says Take)`
+    : ` (TC ${tc > 0 ? '+' : ''}${tc} — book says Skip)`;
 }
 
 let playStats = {
@@ -3048,6 +3193,7 @@ function flipHoleCard() {
   const faceUpEl = makeCardEl(pDealerCards[0], false);
   faceUpEl.classList.add('card-flip');
   dh.replaceChild(faceUpEl, holeEl);
+  playRunningCount += hiloValue(pDealerCards[0].rank);
 }
 
 function isBlackjack(cards) {
@@ -3086,8 +3232,8 @@ function dealNewHand(activeSeats) {
     s.firstAction = true; s.result = null; s.extraBet = 0; s.splitExtraBets = [];
   });
 
-  // Deal dealer cards
-  pDealerCards = [dealPlayCard(), dealPlayCard()];
+  // Deal dealer cards (hole card not counted until flip)
+  pDealerCards = [dealPlayCard(false), dealPlayCard()];
 
   // Deal player cards for each active seat
   activeSeats.forEach(i => { pSeats[i].cards = [dealPlayCard()]; });
@@ -3206,8 +3352,9 @@ function offerInsurance(insurable, cost) {
   const seats = insurable.length === 1
     ? `Seat ${insurable[0] + 1}`
     : `Seats ${insurable.map(i => i + 1).join(', ')}`;
+  const advice = getPlayInsuranceAdvice();
   showInsuranceUI(
-    `Dealer shows Ace. Buy Insurance for ${seats}?\nCost: $${cost}  —  pays 2:1 if dealer has Blackjack`,
+    `Dealer shows Ace. Buy Insurance for ${seats}?\nCost: $${cost}  —  pays 2:1 if dealer has Blackjack${advice}`,
     `Buy Insurance  ($${cost})`, () => handleInsurance(true),
     'No Insurance',             () => handleInsurance(false)
   );
@@ -3541,6 +3688,8 @@ function prepareNextHand() {
   pPlayPhase = 'bet';
   pCurrentSeat = -1;
   updateResetShoeBtn();
+  document.getElementById('playCoachHint').style.display = 'none';
+  updatePlayCoachDisplay(); // refreshes count bar
   pDealerCards = [];
   pSeats.forEach(s => {
     s.cards = []; s.splitHands = []; s.splitIdx = 0;
@@ -3664,6 +3813,7 @@ function showMultiActions() {
   document.getElementById('playBtnDouble').disabled = !canDouble;
   document.getElementById('playBtnSplit').disabled  = !canSplit;
   document.getElementById('playSurrenderArea').style.display = canSurr ? 'block' : 'none';
+  updatePlayCoachDisplay();
 }
 
 // ─── Bankroll + winnings UI ───────────────────────────────────────────────────
@@ -3723,6 +3873,14 @@ function syncPlayRuleUI() {
   syncToggleUI('playH17Toggle',       'playH17Badge',       playH17Enabled);
   document.querySelectorAll('[data-play-decks]').forEach(btn =>
     btn.classList.toggle('active', parseInt(btn.dataset.playDecks) === playDeckCount));
+  const coachToggle = document.getElementById('playCoachToggle');
+  const coachBadge  = document.getElementById('playCoachBadge');
+  if (coachToggle) {
+    coachToggle.checked   = playCoachMode;
+    coachBadge.textContent = playCoachMode ? 'ON' : 'OFF';
+    coachBadge.className   = playCoachMode ? 'das-badge on' : 'das-badge off';
+  }
+  updatePlayCoachDisplay();
 }
 
 function savePlayState() {
@@ -3730,6 +3888,7 @@ function savePlayState() {
     localStorage.setItem('bjPlay', JSON.stringify({
       playBankroll, playStats, pLastBets,
       playDasEnabled, playSurrenderEnabled, playH17Enabled, playDeckCount,
+      playCoachMode,
       pSeatBets: pSeats.map(s => s.bet)
     }));
   } catch(e) {}
@@ -3744,6 +3903,7 @@ function loadPlayState() {
     playSurrenderEnabled = s.playSurrenderEnabled  ?? true;
     playH17Enabled       = s.playH17Enabled        ?? false;
     playDeckCount        = s.playDeckCount         || 6;
+    playCoachMode        = s.playCoachMode         ?? false;
     if (s.pLastBets) pLastBets = s.pLastBets;
     if (s.pSeatBets) s.pSeatBets.forEach((b, i) => { if (pSeats[i]) pSeats[i].bet = b; });
     Object.assign(playStats, s.playStats || {});
