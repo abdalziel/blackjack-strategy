@@ -394,6 +394,26 @@
 .deck-btn:hover { background: rgba(0,0,0,0.4); }
 .deck-btn.active { background: #15803d; border-color: #16a34a; }
 .deck-btn[data-decks="drill"].active { background: #7c3aed; border-color: #8b5cf6; }
+.deck-btn[data-decks="i18"].active   { background: #b45309; border-color: #d97706; }
+
+/* ── Deviation / TC display ─────────────────────────────────────────────── */
+.tc-bar {
+  display: none; align-items: center; justify-content: center;
+  gap: 24px; background: rgba(0,0,0,0.3); border-radius: 8px;
+  padding: 7px 20px; margin-bottom: 12px; font-size: 0.82rem; font-weight: 600;
+}
+.tc-bar.visible { display: flex; }
+.tc-label { opacity: 0.55; margin-right: 4px; font-weight: 400; }
+.tc-pos  { color: #6ee87a; }
+.tc-neg  { color: #f87171; }
+.tc-zero { color: #fbbf24; }
+
+.dev-note {
+  text-align: center; font-size: 0.78rem; font-weight: 600;
+  border-radius: 6px; padding: 5px 14px; margin-bottom: 10px; display: none;
+}
+.dev-note.ins-take { display: block; background: rgba(251,191,36,0.15); color: #fbbf24; }
+.dev-note.ins-skip { display: block; background: rgba(0,0,0,0.2);       color: rgba(255,255,255,0.35); }
 
 /* ── Shuffle overlay ───────────────────────────────────────────────── */
 .shuffle-overlay {
@@ -1262,6 +1282,7 @@ body[data-tab="play"] { padding-left: 0; padding-right: 0; }
   <button class="deck-btn active" data-decks="6" onclick="setDeckCount(6)">6</button>
   <button class="deck-btn" data-decks="8" onclick="setDeckCount(8)">8</button>
   <button class="deck-btn" data-decks="drill" onclick="setDrillMode()">Drills</button>
+  <button class="deck-btn" data-decks="i18"   onclick="setDeviationMode()">I-18</button>
 </div>
 
 
@@ -1295,6 +1316,12 @@ body[data-tab="play"] { padding-left: 0; padding-right: 0; }
   <div id="splitHandsRow" class="split-hands-row" style="display:none"></div>
 
   <div class="hand-info" id="handInfo"></div>
+
+  <div class="tc-bar" id="tcBar">
+    <span><span class="tc-label">Running Count</span><span id="rcDisplay">0</span></span>
+    <span><span class="tc-label">True Count</span><span id="tcDisplay">0</span></span>
+  </div>
+  <div class="dev-note" id="insuranceNote"></div>
 
   <div class="actions">
     <button class="btn btn-hit"    id="btnHit"    onclick="choose('H')">Hit</button>
@@ -1624,6 +1651,7 @@ function buildShoe() {
     [shoe[i], shoe[j]] = [shoe[j], shoe[i]];
   }
   shoeIndex = 0;
+  runningCount = 0;
 }
 
 let needsReshuffle = false;
@@ -1633,7 +1661,9 @@ function dealCard() {
   if (shoeIndex >= Math.floor(shoe.length * 0.75)) needsReshuffle = true;
   // Safety: if shoe is completely exhausted, rebuild immediately (silent)
   if (shoeIndex >= shoe.length) { buildShoe(); needsReshuffle = false; }
-  return shoe[shoeIndex++];
+  const card = shoe[shoeIndex++];
+  runningCount += hiloValue(card.rank);
+  return card;
 }
 
 function randomCard() { return dealCard(); }
@@ -1685,6 +1715,117 @@ let h17Enabled       = false;
 let deckCount        = 6;
 let autoAdvance      = false;
 let drillMode        = false;
+let deviationMode    = false;
+let runningCount     = 0;
+
+// ─── Hi-Lo Count ─────────────────────────────────────────────────────────────
+function hiloValue(rank) {
+  if (['2','3','4','5','6'].includes(rank)) return  1;
+  if (['10','J','Q','K','A'].includes(rank)) return -1;
+  return 0;
+}
+
+function getTrueCount() {
+  const decksLeft = Math.max(0.5, (shoe.length - shoeIndex) / 52);
+  return Math.round(runningCount / decksLeft);
+}
+
+function fmtTC(n) { return n > 0 ? `+${n}` : `${n}`; }
+
+// ─── Illustrious 18 + Fab 4 ──────────────────────────────────────────────────
+// dir 'gte': deviate when TC >= index  |  dir 'lt': deviate when TC < index
+const I18 = [
+  { key:'ins',   insurance:true,  dealerIdx:9, devAction:'I', index: 3, dir:'gte', label:'Insurance'  },
+  { key:'16v10', total:16,        dealerIdx:8, devAction:'S', index: 0, dir:'gte', label:'16 vs 10'   },
+  { key:'15v10', total:15,        dealerIdx:8, devAction:'S', index: 4, dir:'gte', label:'15 vs 10'   },
+  { key:'ttv5',  pairVal:10,      dealerIdx:3, devAction:'P', index: 5, dir:'gte', label:'10,10 vs 5' },
+  { key:'ttv6',  pairVal:10,      dealerIdx:4, devAction:'P', index: 4, dir:'gte', label:'10,10 vs 6' },
+  { key:'10v10', total:10,        dealerIdx:8, devAction:'D', index: 4, dir:'gte', label:'10 vs 10'   },
+  { key:'12v2',  total:12,        dealerIdx:0, devAction:'S', index: 3, dir:'gte', label:'12 vs 2'    },
+  { key:'10vA',  total:10,        dealerIdx:9, devAction:'D', index: 3, dir:'gte', label:'10 vs A'    },
+  { key:'9v7',   total: 9,        dealerIdx:5, devAction:'D', index: 3, dir:'gte', label:'9 vs 7'     },
+  { key:'16v9',  total:16,        dealerIdx:7, devAction:'S', index: 4, dir:'gte', label:'16 vs 9'    },
+  { key:'13v2',  total:13,        dealerIdx:0, devAction:'H', index:-1, dir:'lt',  label:'13 vs 2'    },
+  { key:'12v4',  total:12,        dealerIdx:2, devAction:'H', index: 0, dir:'lt',  label:'12 vs 4'    },
+  { key:'12v5',  total:12,        dealerIdx:3, devAction:'H', index:-2, dir:'lt',  label:'12 vs 5'    },
+  { key:'12v6',  total:12,        dealerIdx:4, devAction:'H', index:-1, dir:'lt',  label:'12 vs 6'    },
+  { key:'13v3',  total:13,        dealerIdx:1, devAction:'H', index:-2, dir:'lt',  label:'13 vs 3'    },
+];
+
+const FAB_4 = [
+  { key:'f14v10', total:14, dealerIdx:8, devAction:'R', index: 3, dir:'gte', label:'14 vs 10' },
+  { key:'f15v10', total:15, dealerIdx:8, devAction:'R', index: 0, dir:'gte', label:'15 vs 10' },
+  { key:'f15v9',  total:15, dealerIdx:7, devAction:'R', index: 2, dir:'gte', label:'15 vs 9'  },
+  { key:'f15vA',  total:15, dealerIdx:9, devAction:'R', index:-1, dir:'gte', label:'15 vs A'  },
+];
+
+function getDeviation(playerCards, dealerRank) {
+  const di    = dealerIndex(dealerRank);
+  const total = handTotal(playerCards);
+  const pair  = isPair(playerCards);
+  const pv    = pair ? cardValue(playerCards[0].rank) : null;
+  const tc    = getTrueCount();
+
+  // Fab 4 first — surrender supersedes I18 plays when available
+  if (surrenderEnabled) {
+    for (const d of FAB_4) {
+      if (d.dealerIdx !== di || d.total !== total || pair) continue;
+      if (d.dir === 'gte' ? tc >= d.index : tc < d.index)
+        return { devAction: d.devAction, index: d.index, dir: d.dir, label: d.label, source: 'Fab 4' };
+    }
+  }
+
+  for (const d of I18) {
+    if (d.insurance) continue;
+    if (d.dealerIdx !== di) continue;
+    if (d.pairVal !== undefined) {
+      if (!pair || pv !== d.pairVal) continue;
+    } else {
+      if (d.total !== total) continue;
+      if (pair && pv !== 5) continue; // 5-5 treated as hard 10; other pairs skip
+    }
+    if (d.dir === 'gte' ? tc >= d.index : tc < d.index)
+      return { devAction: d.devAction, index: d.index, dir: d.dir, label: d.label, source: 'I-18' };
+  }
+  return null;
+}
+
+function updateTCDisplay() {
+  const bar = document.getElementById('tcBar');
+  if (!deviationMode) { bar.classList.remove('visible'); return; }
+  bar.classList.add('visible');
+
+  const rc = runningCount, tc = getTrueCount();
+  const colorClass = v => v > 0 ? 'tc-pos' : v < 0 ? 'tc-neg' : 'tc-zero';
+
+  const rcEl = document.getElementById('rcDisplay');
+  rcEl.textContent = fmtTC(rc); rcEl.className = colorClass(rc);
+  const tcEl = document.getElementById('tcDisplay');
+  tcEl.textContent = fmtTC(tc); tcEl.className = colorClass(tc);
+
+  // Insurance advisory when dealer shows Ace
+  const insEl = document.getElementById('insuranceNote');
+  if (dealerCards.length >= 2 && dealerCards[1].rank === 'A') {
+    if (tc >= 3) {
+      insEl.className = 'dev-note ins-take';
+      insEl.textContent = `💰 I-18: Take Insurance — TC ${fmtTC(tc)} (index: TC ≥ +3)`;
+    } else {
+      insEl.className = 'dev-note ins-skip';
+      insEl.textContent = `Skip Insurance — TC ${fmtTC(tc)} (need ≥ +3)`;
+    }
+  } else {
+    insEl.className = 'dev-note';
+  }
+}
+
+function setDeviationMode() {
+  deviationMode = true;
+  drillMode = false;
+  document.querySelectorAll('.deck-btn').forEach(btn =>
+    btn.classList.toggle('active', btn.dataset.decks === 'i18'));
+  buildShoe(); // fresh shoe resets runningCount
+  saveState(); deal();
+}
 
 // Actions: H=Hit, S=Stand, D=Double Down, P=Split, R=Surrender
 // Source: Wizard of Odds (wizardofodds.com) — 2 Deck, H17, DAS
@@ -1824,8 +1965,8 @@ async function deal() {
 
   answered = false;
 
-  // Mistake-weighted drill: prioritise known weak spots regardless of mode
-  const drillKey = pickDrillHand();
+  // Mistake-weighted drill: skip in deviation mode (forced cards corrupt the running count)
+  const drillKey = deviationMode ? null : pickDrillHand();
   if (drillKey) {
     const gen = generateHandForKey(drillKey);
     if (gen && handTotal(gen.playerCards) !== 21) {
@@ -1861,6 +2002,7 @@ async function deal() {
 
   renderHands();
   updateHandInfo();
+  updateTCDisplay();
 
   document.getElementById('feedback').className = 'feedback idle';
   document.getElementById('feedback').innerHTML =
@@ -1946,6 +2088,9 @@ function buildHardHand(total) {
 // ─── Drill Mode hand generation ───────────────────────────────────────────────
 function setDrillMode() {
   drillMode = true;
+  deviationMode = false;
+  document.getElementById('tcBar').classList.remove('visible');
+  document.getElementById('insuranceNote').className = 'dev-note';
   document.querySelectorAll('.deck-btn').forEach(btn =>
     btn.classList.toggle('active', btn.dataset.decks === 'drill'));
   saveState(); deal();
@@ -2080,7 +2225,9 @@ function choose(action) {
   if (answered) return;
   answered = true;
 
-  const correctAction = basicStrategy(playerCards, dealerCards[1].rank);
+  const deviation    = getDeviation(playerCards, dealerCards[1].rank);
+  const basicAction  = basicStrategy(playerCards, dealerCards[1].rank);
+  const correctAction = deviation ? deviation.devAction : basicAction;
   const isCorrect = action === correctAction;
 
   ALL_BTN_IDS.forEach(id => { document.getElementById(id).disabled = true; });
@@ -2112,13 +2259,35 @@ function choose(action) {
   updateScore();
 
   const fb = document.getElementById('feedback');
-  if (isCorrect) {
-    fb.className = 'feedback correct';
-    fb.innerHTML = `<span class="feedback-icon">✅</span><span><strong>Correct!</strong> ${actionLabels[correctAction]} is the right Wizard of Odds play here.</span>`;
+  if (deviation) {
+    const dir = deviation.dir === 'gte' ? '≥' : '<';
+    const tc  = getTrueCount();
+    if (isCorrect) {
+      fb.className = 'feedback correct';
+      fb.innerHTML = `<span class="feedback-icon">✅</span><span><strong>Correct!</strong> At TC ${fmtTC(tc)}, <strong>${deviation.source}</strong> says ${actionLabels[correctAction]} — ${deviation.label} (index: TC ${dir} ${fmtTC(deviation.index)}). Basic strategy: ${actionLabels[basicAction]}.</span>`;
+    } else {
+      fb.className = 'feedback wrong';
+      fb.innerHTML = `<span class="feedback-icon">❌</span><span><strong>Not quite.</strong> At TC ${fmtTC(tc)}, <strong>${deviation.source}</strong> overrides basic strategy — ${actionLabels[correctAction]} (${deviation.label}, TC ${dir} ${fmtTC(deviation.index)}). Basic would say ${actionLabels[basicAction]}.</span>`;
+    }
+  } else if (deviationMode && !deviation) {
+    // In deviation mode but no deviation applies — explain that basic strategy is correct
+    if (isCorrect) {
+      fb.className = 'feedback correct';
+      fb.innerHTML = `<span class="feedback-icon">✅</span><span><strong>Correct!</strong> ${actionLabels[correctAction]} — basic strategy at TC ${fmtTC(getTrueCount())} (no I-18 deviation applies here).</span>`;
+    } else {
+      const why = getExplanation(playerCards, dealerCards[1].rank, correctAction);
+      fb.className = 'feedback wrong';
+      fb.innerHTML = `<span class="feedback-icon">❌</span><span><strong>Not quite.</strong> Basic strategy says <strong>${actionLabels[correctAction]}</strong> at TC ${fmtTC(getTrueCount())} — no deviation applies. ${why}</span>`;
+    }
   } else {
-    const why = getExplanation(playerCards, dealerCards[1].rank, correctAction);
-    fb.className = 'feedback wrong';
-    fb.innerHTML = `<span class="feedback-icon">❌</span><span><strong>Not quite.</strong> Wizard of Odds says <strong>${actionLabels[correctAction]}</strong>. ${why}</span>`;
+    if (isCorrect) {
+      fb.className = 'feedback correct';
+      fb.innerHTML = `<span class="feedback-icon">✅</span><span><strong>Correct!</strong> ${actionLabels[correctAction]} is the right Wizard of Odds play here.</span>`;
+    } else {
+      const why = getExplanation(playerCards, dealerCards[1].rank, correctAction);
+      fb.className = 'feedback wrong';
+      fb.innerHTML = `<span class="feedback-icon">❌</span><span><strong>Not quite.</strong> Wizard of Odds says <strong>${actionLabels[correctAction]}</strong>. ${why}</span>`;
+    }
   }
 
   saveState();
@@ -2351,7 +2520,7 @@ function saveState() {
       correct, total_hands, streak,
       wrongCounts: {...wrongCounts},
       consecutiveCorrect: {...consecutiveCorrect},
-      dasEnabled, surrenderEnabled, h17Enabled, deckCount, autoAdvance, drillMode
+      dasEnabled, surrenderEnabled, h17Enabled, deckCount, autoAdvance, drillMode, deviationMode
     }));
   } catch(e) {}
 }
@@ -2371,12 +2540,17 @@ function loadState() {
     deckCount        = s.deckCount        || 6;
     autoAdvance      = s.autoAdvance      ?? false;
     drillMode        = s.drillMode        ?? false;
+    deviationMode    = s.deviationMode    ?? false;
 
     syncToggleUI('dasToggle',         'dasBadge',         dasEnabled);
     syncToggleUI('surrenderToggle',   'surrenderBadge',   surrenderEnabled);
     syncToggleUI('h17Toggle',         'h17Badge',         h17Enabled);
     syncToggleUI('autoAdvanceToggle', 'autoAdvanceBadge', autoAdvance);
-    if (drillMode) {
+    if (deviationMode) {
+      document.querySelectorAll('.deck-btn').forEach(btn =>
+        btn.classList.toggle('active', btn.dataset.decks === 'i18'));
+      document.getElementById('tcBar').classList.add('visible');
+    } else if (drillMode) {
       document.querySelectorAll('.deck-btn').forEach(btn =>
         btn.classList.toggle('active', btn.dataset.decks === 'drill'));
     } else {
@@ -2422,6 +2596,9 @@ function onAutoAdvanceChange() {
 
 function setDeckCount(n) {
   drillMode = false;
+  deviationMode = false;
+  document.getElementById('tcBar').classList.remove('visible');
+  document.getElementById('insuranceNote').className = 'dev-note';
   deckCount = n;
   document.querySelectorAll('.deck-btn').forEach(btn =>
     btn.classList.toggle('active', parseInt(btn.dataset.decks) === n));
