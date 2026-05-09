@@ -395,20 +395,6 @@
 .deck-btn.active { background: #15803d; border-color: #16a34a; }
 .deck-btn[data-decks="drill"].active { background: #7c3aed; border-color: #8b5cf6; }
 
-/* Guide selector */
-.guide-selector {
-  display: flex; align-items: center; justify-content: center;
-  gap: 8px; margin-bottom: 14px; font-size: 0.82rem;
-}
-.guide-selector > span { opacity: 0.6; }
-.guide-btn {
-  background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.15);
-  border-radius: 6px; color: #fff; font-size: 0.78rem; font-weight: 600;
-  padding: 5px 12px; cursor: pointer; transition: background 0.15s, border-color 0.15s;
-}
-.guide-btn:hover { background: rgba(0,0,0,0.4); }
-.guide-btn.active { background: #1d4ed8; border-color: #3b82f6; }
-
 /* ── Shuffle overlay ───────────────────────────────────────────────── */
 .shuffle-overlay {
   position: fixed;
@@ -1228,7 +1214,7 @@ body[data-tab="play"] { padding-left: 0; padding-right: 0; }
 </div>
 
 <h1>Blackjack Strategy Trainer</h1>
-<p class="subtitle">T-H Basic Strategy &mdash; T. Hopper &mdash; Late Surrender, 6 decks</p>
+<p class="subtitle">Wizard of Odds Basic Strategy &mdash; 2 Deck &mdash; Dealer Hits Soft 17</p>
 
 <div class="tab-nav">
   <button class="tab-btn active" id="tabBtnStrategy" onclick="switchTab('strategy')">Strategy Trainer</button>
@@ -1278,11 +1264,6 @@ body[data-tab="play"] { padding-left: 0; padding-right: 0; }
   <button class="deck-btn" data-decks="drill" onclick="setDrillMode()">Drills</button>
 </div>
 
-<div class="guide-selector">
-  <span>Strategy Guide:</span>
-  <button class="guide-btn active" data-guide="th" onclick="setGuide('th')">T-H</button>
-  <button class="guide-btn" data-guide="woo" onclick="setGuide('woo')">Wizard of Odds</button>
-</div>
 
 <div class="scoreboard">
   <div class="score-item">
@@ -1330,13 +1311,13 @@ body[data-tab="play"] { padding-left: 0; padding-right: 0; }
 
   <div class="feedback idle" id="feedback">
     <span class="feedback-icon">🃏</span>
-    <span id="feedbackIdleText">Make your move based on T-H Basic Strategy.</span>
+    <span>Make your move based on Wizard of Odds Basic Strategy.</span>
   </div>
 
   <button class="btn-next" id="btnNext" style="display:none">Next Hand &rarr;</button>
 </div>
 
-<p class="strategy-hint" id="strategyHint">Based on: T-H Basic Blackjack by T. Hopper &mdash; Hard totals · Soft totals · Pairs · Late Surrender</p>
+<p class="strategy-hint">Based on: Wizard of Odds (wizardofodds.com) &mdash; 2 Deck · Dealer Hits Soft 17 · Double After Split</p>
 
 </div><!-- end .main-col -->
 
@@ -1704,91 +1685,16 @@ let h17Enabled       = false;
 let deckCount        = 6;
 let autoAdvance      = false;
 let drillMode        = false;
-let activeGuide      = 'th';
 
 // Actions: H=Hit, S=Stand, D=Double Down, P=Split, R=Surrender
-function thStrategy(playerCards, dealerRank) {
+// Source: Wizard of Odds (wizardofodds.com) — 2 Deck, H17, DAS
+function basicStrategy(playerCards, dealerRank) {
   const di    = dealerIndex(dealerRank);
   const total = handTotal(playerCards);
   const soft  = isSoft(playerCards);
   const pair  = isPair(playerCards);
   const das   = dasEnabled;
   const h17   = h17Enabled;
-  const sd    = deckCount === 1;   // single-deck adjustments
-  const fd    = deckCount <= 2;    // 1-2 deck adjustments
-
-  // ── Pairs ─────────────────────────────────────────────────────────────────
-  if (pair) {
-    const pv = cardValue(playerCards[0].rank);
-    if (pv === 11) return 'P'; // Aces: cardValue('A') === 11, always split
-    if (pv === 10) return 'S';
-    if (pv === 9)  { if (di === 9) return (h17 && das) ? 'P' : 'S'; return ['P','P','P','P','P','S','P','P','S'][di]; }
-    if (pv === 8)  { if (di === 8) return surrenderEnabled ? 'R' : 'P'; return 'P'; }
-    if (pv === 7)  return (di <= 5 || (di === 6 && (sd || das))) ? 'P' : 'H';
-    if (pv === 6)  { if (das) return di <= 4 ? 'P' : 'H'; return (di >= 1 && di <= 4) ? 'P' : 'H'; }
-    if (pv === 5)  return di <= 7 ? 'D' : 'H';
-    if (pv === 4)  { if (das && di >= 2 && di <= 4) return 'P'; return 'H'; }
-    if (pv === 3)  { if (das) return di <= 5 ? 'P' : 'H'; return (di >= 2 && di <= 5) ? 'P' : 'H'; }
-    if (pv === 2)  { if (das) return di <= 5 ? 'P' : 'H'; return (di >= 1 && di <= 5) ? 'P' : 'H'; }
-  }
-
-  // ── Soft Totals ────────────────────────────────────────────────────────────
-  if (soft && playerCards.length === 2) {
-    const nonAce = playerCards.find(c => c.rank !== 'A');
-    if (nonAce) {
-      const nv = cardValue(nonAce.rank);
-      if (nv >= 8) {
-        if (nv === 8 && (di === 3 || di === 4)) return 'D'; // A8 doubles vs dealer 5,6
-        return 'S';
-      }
-      if (nv === 7) {
-        // A7 (soft 18): Double vs 2–6; Stand vs 7,8; Stand vs A (S17) or Hit vs A (H17); Hit vs 9,10
-        if (di <= 4) return 'D';
-        if (di === 5 || di === 6) return 'S';
-        if (di === 9) return h17 ? 'H' : 'S';
-        return 'H';
-      }
-      if (nv === 6) {
-        // A6 (soft 17): Double vs 2–6; Hit otherwise
-        return di <= 4 ? 'D' : 'H';
-      }
-      if (di >= 2 && di <= 4) return 'D';
-      return 'H';
-    }
-  }
-
-  // ── Hard Totals ────────────────────────────────────────────────────────────
-  // Hard 8 doubles vs 5–6
-  if (total === 8 && (di === 3 || di === 4)) return 'D';
-
-  if (surrenderEnabled && total >= 14 && total <= 16) {
-    if (total === 16 && (di === 7 || di === 8 || di === 9)) return 'R';
-    if (total === 15 && (di === 8 || di === 9))             return 'R';
-    if (total === 14 && di === 8)                           return 'R';
-  }
-
-  // Hard 11 always doubles
-  if (total === 11) return 'D';
-  if (total === 10) return di <= 7 ? 'D' : 'H';
-  // 1–2 deck: Hard 9 doubles vs 2–6; 4+ deck: vs 3–6
-  if (total === 9)  return (fd ? di <= 4 : (di >= 1 && di <= 4)) ? 'D' : 'H';
-
-  if (total >= 17)                return 'S';
-  if (total >= 13 && total <= 16) return di <= 4 ? 'S' : 'H';
-  if (total === 12)               return (di >= 1 && di <= 4) ? 'S' : 'H';
-  return 'H';
-}
-
-// ─── Wizard of Odds Strategy ─────────────────────────────────────────────────
-// Source: wizardofodds.com — differs from T-H on several 2-deck H17 DAS plays
-function wooStrategy(playerCards, dealerRank) {
-  const di    = dealerIndex(dealerRank);
-  const total = handTotal(playerCards);
-  const soft  = isSoft(playerCards);
-  const pair  = isPair(playerCards);
-  const das   = dasEnabled;
-  const h17   = h17Enabled;
-  const sd    = deckCount === 1;
   const fd    = deckCount <= 2;
 
   // ── Pairs ──────────────────────────────────────────────────────────────────
@@ -1796,14 +1702,15 @@ function wooStrategy(playerCards, dealerRank) {
     const pv = cardValue(playerCards[0].rank);
     if (pv === 11) return 'P';
     if (pv === 10) return 'S';
-    // WoO: 9-9 vs A always stands (T-H splits with H17+DAS)
+    // 9-9: split vs 2-6, 8-9; stand vs 7, 10, A
     if (pv === 9)  return ['P','P','P','P','P','S','P','P','S','S'][di];
     if (pv === 8)  { if (di === 8) return surrenderEnabled ? 'R' : 'P'; return 'P'; }
-    // WoO: 7-7 splits vs 2-7 only — no DAS bonus to include 8
-    if (pv === 7)  return di <= 5 ? 'P' : 'H';
-    if (pv === 6)  { if (das) return di <= 4 ? 'P' : 'H'; return (di >= 1 && di <= 4) ? 'P' : 'H'; }
+    // 7-7: split vs 2-8 with DAS, vs 2-7 without
+    if (pv === 7)  return (di <= 5 || (di === 6 && das)) ? 'P' : 'H';
+    // 6-6: split vs 2-7 with DAS, vs 3-6 without
+    if (pv === 6)  { if (das) return di <= 5 ? 'P' : 'H'; return (di >= 1 && di <= 4) ? 'P' : 'H'; }
     if (pv === 5)  return di <= 7 ? 'D' : 'H';
-    // WoO: 4-4 splits vs 5-6 only (T-H splits vs 4-6)
+    // 4-4: split vs 5-6 only with DAS
     if (pv === 4)  { if (das && di >= 3 && di <= 4) return 'P'; return 'H'; }
     if (pv === 3)  { if (das) return di <= 5 ? 'P' : 'H'; return (di >= 2 && di <= 5) ? 'P' : 'H'; }
     if (pv === 2)  { if (das) return di <= 5 ? 'P' : 'H'; return (di >= 1 && di <= 5) ? 'P' : 'H'; }
@@ -1815,19 +1722,19 @@ function wooStrategy(playerCards, dealerRank) {
     if (nonAce) {
       const nv = cardValue(nonAce.rank);
       if (nv >= 8) {
-        // WoO: A-8 doubles vs 6 only (T-H doubles vs 5-6)
+        // A-8: double vs 6 only; A-9: always stand
         if (nv === 8 && di === 4) return 'D';
         return 'S';
       }
       if (nv === 7) {
+        // A-7: double vs 2-6; stand vs 7-8; hit vs 9-A (H17)
         if (di <= 4) return 'D';
         if (di === 5 || di === 6) return 'S';
-        return 'H'; // vs 9,10,A — WoO always hits vs A with H17
+        return 'H';
       }
-      if (nv === 6) return di <= 4 ? 'D' : 'H';
-      // WoO: A-2 and A-3 double vs 5-6 only (T-H doubles vs 4-6)
-      if (nv <= 3) { return (di >= 3 && di <= 4) ? 'D' : 'H'; }
-      // A-4 and A-5: double vs 4-6 (same as T-H)
+      // A-6: double vs 3-6; hit vs 2 and 7-A
+      if (nv === 6) return (di >= 1 && di <= 4) ? 'D' : 'H';
+      // A-2 through A-5: double vs 4-6
       return (di >= 2 && di <= 4) ? 'D' : 'H';
     }
   }
@@ -1843,38 +1750,13 @@ function wooStrategy(playerCards, dealerRank) {
 
   if (total === 11) return 'D';
   if (total === 10) return di <= 7 ? 'D' : 'H';
+  // 2-deck: double 9 vs 2-6; 4+ deck: vs 3-6
   if (total === 9)  return (fd ? di <= 4 : (di >= 1 && di <= 4)) ? 'D' : 'H';
 
   if (total >= 17)                return 'S';
   if (total >= 13 && total <= 16) return di <= 4 ? 'S' : 'H';
   if (total === 12)               return (di >= 1 && di <= 4) ? 'S' : 'H';
   return 'H';
-}
-
-// ─── Strategy Router ─────────────────────────────────────────────────────────
-function basicStrategy(playerCards, dealerRank) {
-  return activeGuide === 'woo'
-    ? wooStrategy(playerCards, dealerRank)
-    : thStrategy(playerCards, dealerRank);
-}
-
-// ─── Guide Selector ──────────────────────────────────────────────────────────
-const GUIDE_META = {
-  th:  { label: 'T-H Basic Strategy', hint: 'Based on: T-H Basic Blackjack by T. Hopper — Hard totals · Soft totals · Pairs · Late Surrender' },
-  woo: { label: 'Wizard of Odds Strategy', hint: 'Based on: Wizard of Odds (wizardofodds.com) — Mathematically optimal basic strategy' },
-};
-
-function setGuide(guide) {
-  activeGuide = guide;
-  document.querySelectorAll('.guide-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.guide === guide);
-  });
-  const meta = GUIDE_META[guide];
-  const hintEl = document.getElementById('strategyHint');
-  if (hintEl) hintEl.textContent = meta.hint;
-  const idleEl = document.getElementById('feedbackIdleText');
-  if (idleEl) idleEl.textContent = `Make your move based on ${meta.label}.`;
-  refreshChart();
 }
 
 // ─── Render Cards ────────────────────────────────────────────────────────────
@@ -1982,7 +1864,7 @@ async function deal() {
 
   document.getElementById('feedback').className = 'feedback idle';
   document.getElementById('feedback').innerHTML =
-    '<span class="feedback-icon">🃏</span><span>Make your move based on T-H Basic Strategy.</span>';
+    '<span class="feedback-icon">🃏</span><span>Make your move based on Wizard of Odds Basic Strategy.</span>';
 
   const btnNext = document.getElementById('btnNext');
   btnNext.textContent = 'Next Hand →';
@@ -2232,11 +2114,11 @@ function choose(action) {
   const fb = document.getElementById('feedback');
   if (isCorrect) {
     fb.className = 'feedback correct';
-    fb.innerHTML = `<span class="feedback-icon">✅</span><span><strong>Correct!</strong> ${actionLabels[correctAction]} is the right T-H Basic Strategy play here.</span>`;
+    fb.innerHTML = `<span class="feedback-icon">✅</span><span><strong>Correct!</strong> ${actionLabels[correctAction]} is the right Wizard of Odds play here.</span>`;
   } else {
     const why = getExplanation(playerCards, dealerCards[1].rank, correctAction);
     fb.className = 'feedback wrong';
-    fb.innerHTML = `<span class="feedback-icon">❌</span><span><strong>Not quite.</strong> T-H Basic Strategy says <strong>${actionLabels[correctAction]}</strong>. ${why}</span>`;
+    fb.innerHTML = `<span class="feedback-icon">❌</span><span><strong>Not quite.</strong> Wizard of Odds says <strong>${actionLabels[correctAction]}</strong>. ${why}</span>`;
   }
 
   saveState();
@@ -2292,7 +2174,7 @@ function enterSplitHand(index, resetFeedback = true) {
   if (resetFeedback) {
     document.getElementById('feedback').className = 'feedback idle';
     document.getElementById('feedback').innerHTML =
-      '<span class="feedback-icon">🃏</span><span>Make your move based on T-H Basic Strategy.</span>';
+      '<span class="feedback-icon">🃏</span><span>Make your move based on Wizard of Odds Basic Strategy.</span>';
   }
   document.getElementById('btnNext').style.display = 'none';
 }
@@ -2363,13 +2245,12 @@ function getExplanation(cards, dealerRank, correctAction) {
   const soft  = isSoft(cards);
   const pair  = isPair(cards);
   const dv    = cardValue(dealerRank);
-  const src   = activeGuide === 'woo' ? 'Wizard of Odds' : 'T-H';
 
   if (correctAction === 'R') {
-    return `${src} calls for late surrender here — you give up half your bet rather than playing out a losing hand.`;
+    return `Wizard of Odds calls for late surrender here — give up half your bet rather than playing out a losing hand.`;
   }
   if (pair) {
-    if (correctAction === 'P') return `Splitting this pair is correct ${src} strategy${dasEnabled ? ' with DAS' : ''}.`;
+    if (correctAction === 'P') return `Splitting this pair is correct Wizard of Odds strategy${dasEnabled ? ' with DAS' : ''}.`;
     if (correctAction === 'D') return `Treat this pair as a hard ${total} — Double is optimal here.`;
     if (correctAction === 'S') return `Keep the pair together; standing is correct with this strong total.`;
     return dasEnabled
@@ -2377,21 +2258,21 @@ function getExplanation(cards, dealerRank, correctAction) {
       : `Without Double After Split available, splitting here loses its advantage — Hit instead.`;
   }
   if (soft) {
-    if (correctAction === 'D') return `${src}: Double soft hands in this spot.`;
+    if (correctAction === 'D') return `Wizard of Odds: Double soft hands in this spot.`;
     if (correctAction === 'S') return `Soft ${total} is strong enough to stand here.`;
     return `Take a card — soft hands can't bust on one hit.`;
   }
   // Hard
   if (correctAction === 'D') {
-    if (total === 9)  return `Hard 9 — Double vs dealer 2–6 per ${src}.`;
-    if (total === 10) return `Hard 10 — Double vs dealer 2–9 per ${src}.`;
-    if (total === 11) return `Hard 11 — Always double per ${src}.`;
+    if (total === 9)  return `Hard 9 — Double vs dealer 2–6 per Wizard of Odds.`;
+    if (total === 10) return `Hard 10 — Double vs dealer 2–9 per Wizard of Odds.`;
+    if (total === 11) return `Hard 11 — Always double per Wizard of Odds.`;
     return `Hard ${total} vs dealer ${dealerRank} is a prime doubling spot.`;
   }
   if (correctAction === 'S') {
     return dv <= 6
       ? `Dealer shows a bust card (${dealerRank}) — stand and let the dealer take the risk.`
-      : `Stand on hard ${total} here per ${src}.`;
+      : `Stand on hard ${total} here per Wizard of Odds.`;
   }
   return `Hard ${total} needs improvement — take a card.`;
 }
